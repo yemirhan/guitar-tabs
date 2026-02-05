@@ -2,18 +2,11 @@ name: Build macOS
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-14
-    strategy:
-      matrix:
-        arch: [arm64, x64]
 
     steps:
       - name: Checkout
@@ -32,7 +25,6 @@ jobs:
         run: npm run build
 
       - name: Import code signing certificate
-        if: github.event_name != 'pull_request'
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -53,20 +45,15 @@ jobs:
             -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
 
-      - name: Build & sign (signed)
-        if: github.event_name != 'pull_request'
+      - name: Build & sign
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx electron-builder --mac --${{ matrix.arch }}
-
-      - name: Build (unsigned — PR)
-        if: github.event_name == 'pull_request'
-        run: npx electron-builder --mac --${{ matrix.arch }} --config.mac.identity=null
+        run: npx electron-builder --mac --arm64
 
       - name: Cleanup keychain
-        if: always() && github.event_name != 'pull_request'
+        if: always()
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           if [ -f "$KEYCHAIN_PATH" ]; then
@@ -76,19 +63,18 @@ jobs:
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
-          name: dmg-${{ matrix.arch }}
+          name: dmg-arm64
           path: dist/*.dmg
           if-no-files-found: error
 
       - name: Upload ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: zip-${{ matrix.arch }}
+          name: zip-arm64
           path: dist/*.zip
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     permissions:
