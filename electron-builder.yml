@@ -9,7 +9,6 @@ files:
   - out/**/*
 
 asar: true
-publish: never
 
 fileAssociations:
   - ext:
