@@ -91,9 +91,9 @@ export function useAlphaTab(
     if (!container || !viewport) return
 
     const settings = new alphaTab.Settings()
-    settings.core.fontDirectory = '/font/'
+    settings.core.fontDirectory = 'font/'
     settings.player.enablePlayer = true
-    settings.player.soundFont = '/soundfont/sonivox.sf2'
+    settings.player.soundFont = 'soundfont/sonivox.sf2'
     settings.player.scrollElement = viewport
     settings.player.scrollOffsetY = -30
     settings.display.layoutMode = alphaTab.LayoutMode.Page

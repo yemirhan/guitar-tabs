@@ -9,6 +9,10 @@ files:
   - out/**/*
 
 asar: true
+asarUnpack:
+  - out/renderer/font/**/*
+  - out/renderer/soundfont/**/*
+  - out/renderer/assets/alphaTab*
 
 fileAssociations:
   - ext:

@@ -1,6 +1,6 @@
 {
   "name": "guitar-tab-reader",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Guitar Pro file reader built with Electron, React, and alphaTab",
   "main": "./out/main/index.js",
   "scripts": {

@@ -1,7 +1,23 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from "electron";
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol, net } from "electron";
 import { join } from "path";
+import { pathToFileURL } from "url";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
+
+// Register custom protocol before app is ready — makes it a "standard" scheme
+// so relative URLs, Workers, and fetch all work correctly (unlike file://)
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "app",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
+]);
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
@@ -41,13 +57,21 @@ function createWindow(): BrowserWindow {
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
     mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
   } else {
-    mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+    mainWindow.loadURL("app://bundle/index.html");
   }
 
   return mainWindow;
 }
 
 app.whenReady().then(() => {
+  // Serve renderer files via custom protocol so alphaTab Workers/fonts resolve correctly
+  const rendererDir = join(__dirname, "../renderer");
+  protocol.handle("app", (request) => {
+    const url = new URL(request.url);
+    const filePath = join(rendererDir, decodeURIComponent(url.pathname));
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+
   electronApp.setAppUserModelId("com.guitar-tab-reader");
 
   app.on("browser-window-created", (_, window) => {
