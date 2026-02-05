@@ -1,0 +1,312 @@
+@import "tailwindcss";
+
+/* ============================================
+   STUDIO MONITOR THEME — CSS Custom Properties
+   ============================================ */
+
+/* --- Dark Mode (default) --- */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Backgrounds */
+  --bg-base: #0a0a0f;
+  --bg-base-end: #111118;
+  --bg-surface: #16161f;
+  --bg-surface-raised: #1c1c28;
+  --bg-surface-overlay: #22222e;
+
+  /* Text */
+  --text-primary: #e8eaf0;
+  --text-secondary: #8b8fa0;
+  --text-dim: #4a4d5e;
+
+  /* Accents */
+  --accent-primary: #00d4ff;
+  --accent-amber: #ff9f1c;
+  --accent-success: #00ff88;
+  --accent-danger: #ff3355;
+
+  /* Borders */
+  --border-default: #2a2a38;
+  --border-subtle: #1e1e2a;
+
+  /* Toolbar */
+  --toolbar-bg: rgba(16, 16, 24, 0.80);
+  --toolbar-border: rgba(42, 42, 56, 0.6);
+
+  /* Tooltip */
+  --tooltip-bg: rgba(22, 22, 31, 0.90);
+  --tooltip-border: rgba(42, 42, 56, 0.5);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #2a2a38;
+  --scrollbar-thumb-hover: #3a3a4a;
+
+  /* Tab viewer */
+  --tab-viewer-bg: #1a1a24;
+
+  /* Track panel */
+  --track-hover: rgba(22, 22, 31, 0.6);
+  --track-selected: rgba(0, 212, 255, 0.06);
+  --track-selected-border: #00d4ff;
+
+  /* Edit panel */
+  --edit-bg: #0e0e14;
+}
+
+/* --- Light Mode --- */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --bg-base: #f4f5f7;
+  --bg-base-end: #ecedf0;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #f8f9fb;
+  --bg-surface-overlay: #f0f1f4;
+
+  /* Text */
+  --text-primary: #1a1b23;
+  --text-secondary: #5a5d6e;
+  --text-dim: #9a9db0;
+
+  /* Accents */
+  --accent-primary: #0099cc;
+  --accent-amber: #e88a00;
+  --accent-success: #00b85e;
+  --accent-danger: #e02040;
+
+  /* Borders */
+  --border-default: #d8dae0;
+  --border-subtle: #e8eaef;
+
+  /* Toolbar */
+  --toolbar-bg: rgba(255, 255, 255, 0.85);
+  --toolbar-border: rgba(216, 218, 224, 0.6);
+
+  /* Tooltip */
+  --tooltip-bg: rgba(255, 255, 255, 0.92);
+  --tooltip-border: rgba(216, 218, 224, 0.5);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #c8cad0;
+  --scrollbar-thumb-hover: #b0b2b8;
+
+  /* Tab viewer */
+  --tab-viewer-bg: #ffffff;
+
+  /* Track panel */
+  --track-hover: rgba(0, 0, 0, 0.03);
+  --track-selected: rgba(0, 153, 204, 0.06);
+  --track-selected-border: #0099cc;
+
+  /* Edit panel */
+  --edit-bg: #f0f1f4;
+}
+
+/* ============================================
+   Tailwind v4 Configuration
+   ============================================ */
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme {
+  --font-display: "DM Sans", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-accent: var(--accent-primary);
+  --color-accent-amber: var(--accent-amber);
+  --color-accent-success: var(--accent-success);
+  --color-accent-danger: var(--accent-danger);
+
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--accent-primary) 60%, transparent);
+  }
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--bg-base) 0%, var(--bg-base-end) 100%);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+/* Subtle noise texture overlay */
+#root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Smooth theme transition */
+*,
+*::before,
+*::after {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+
+/* Opt-out for elements that shouldn't animate */
+.no-theme-transition,
+.no-theme-transition *,
+.no-theme-transition *::before,
+.no-theme-transition *::after,
+canvas,
+video,
+img,
+svg {
+  transition-property: none !important;
+  transition-duration: 0ms !important;
+}
+
+/* Restore specific transitions we want on interactive elements */
+button,
+a,
+[role="button"],
+[role="slider"],
+input,
+textarea {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* ============================================
+   Electron Drag Region
+   ============================================ */
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* ============================================
+   alphaTab Cursor Styles
+   ============================================ */
+
+.at-cursor-bar {
+  background: color-mix(in srgb, var(--accent-amber) 25%, transparent);
+}
+
+.at-selection div {
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+}
+
+.at-cursor-beat {
+  background: color-mix(in srgb, var(--accent-primary) 75%, transparent);
+  width: 3px;
+}
+
+.at-highlight * {
+  fill: var(--accent-primary);
+  stroke: var(--accent-primary);
+}
+
+/* alphaTab rendering container */
+.at-main {
+  min-height: 100%;
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ============================================
+   Resize Cursor Override
+   ============================================ */
+
+body.resizing,
+body.resizing * {
+  cursor: col-resize !important;
+}
+
+/* ============================================
+   Studio Spinner
+   ============================================ */
+
+.studio-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   Waveform Empty State
+   ============================================ */
+
+.waveform-bar {
+  display: inline-block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--border-default);
+  animation: waveform 1.5s ease-in-out infinite;
+}
+
+.waveform-bar:nth-child(1) { height: 12px; animation-delay: 0s; }
+.waveform-bar:nth-child(2) { height: 20px; animation-delay: 0.1s; }
+.waveform-bar:nth-child(3) { height: 32px; animation-delay: 0.2s; }
+.waveform-bar:nth-child(4) { height: 24px; animation-delay: 0.3s; }
+.waveform-bar:nth-child(5) { height: 40px; animation-delay: 0.4s; }
+.waveform-bar:nth-child(6) { height: 28px; animation-delay: 0.5s; }
+.waveform-bar:nth-child(7) { height: 16px; animation-delay: 0.6s; }
+.waveform-bar:nth-child(8) { height: 36px; animation-delay: 0.7s; }
+.waveform-bar:nth-child(9) { height: 20px; animation-delay: 0.8s; }
+
+@keyframes waveform {
+  0%, 100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 0.6; transform: scaleY(1.3); }
+}
