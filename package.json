@@ -7,7 +7,11 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:mac:arm64": "electron-vite build && electron-builder --mac --arm64",
+    "build:mac:x64": "electron-vite build && electron-builder --mac --x64",
+    "build:dir": "electron-vite build && electron-builder --mac --dir"
   },
   "dependencies": {
     "@coderline/alphatab": "^1.3.1",

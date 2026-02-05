@@ -1,0 +1,49 @@
+appId: com.guitar-tab-reader
+productName: Guitar Tab Reader
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**/*
+
+asar: true
+
+fileAssociations:
+  - ext:
+      - gp
+      - gp3
+      - gp4
+      - gp5
+      - gpx
+      - gp7
+    name: Guitar Pro File
+    role: Viewer
+    mimeType: application/x-guitar-pro
+
+mac:
+  category: public.app-category.music
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  notarize: true
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  sign: false
