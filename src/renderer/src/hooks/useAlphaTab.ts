@@ -1,6 +1,11 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import * as alphaTab from '@coderline/alphatab'
 
+export interface PlaybackRange {
+  startTick: number
+  endTick: number
+}
+
 export interface AlphaTabState {
   api: alphaTab.AlphaTabApi | null
   score: alphaTab.model.Score | null
@@ -10,6 +15,7 @@ export interface AlphaTabState {
   isLoading: boolean
   isPlayerReady: boolean
   tempo: number
+  zoom: number
   staveProfile: alphaTab.StaveProfile
 }
 
@@ -24,8 +30,16 @@ export interface AlphaTabActions {
   soloTrack: (track: alphaTab.model.Track, solo: boolean) => void
   loadTex: (tex: string) => void
   getScore: () => alphaTab.model.Score | null
+  getApi: () => alphaTab.AlphaTabApi | null
   changeTrackProgram: (track: alphaTab.model.Track, program: number) => void
   setStaveProfile: (profile: alphaTab.StaveProfile) => void
+  setZoom: (scale: number) => void
+  exportPdf: () => void
+  exportMidi: () => void
+  exportAlphaTex: () => Promise<void>
+  setPlaybackRange: (range: PlaybackRange | null) => void
+  setLooping: (enabled: boolean) => void
+  setCountIn: (volume: number) => void
 }
 
 function applyThemeColors(settings: alphaTab.Settings, theme: 'light' | 'dark') {
@@ -62,6 +76,10 @@ export function useAlphaTab(
   const [isLoading, setIsLoading] = useState(false)
   const [isPlayerReady, setIsPlayerReady] = useState(false)
   const [tempo, setTempoState] = useState(1)
+  const [zoom, setZoomState] = useState<number>(() => {
+    const saved = localStorage.getItem('zoom')
+    return saved !== null ? Number(saved) : 1.0
+  })
   const [staveProfile, setStaveProfileState] = useState<alphaTab.StaveProfile>(() => {
     const saved = localStorage.getItem('staveProfile')
     return saved !== null ? (Number(saved) as alphaTab.StaveProfile) : alphaTab.StaveProfile.Default
@@ -82,6 +100,11 @@ export function useAlphaTab(
     const savedProfile = localStorage.getItem('staveProfile')
     if (savedProfile !== null) {
       settings.display.staveProfile = Number(savedProfile) as alphaTab.StaveProfile
+    }
+    // Restore zoom
+    const savedZoom = localStorage.getItem('zoom')
+    if (savedZoom !== null) {
+      settings.display.scale = Number(savedZoom)
     }
     applyThemeColors(settings, theme)
 
@@ -194,12 +217,15 @@ export function useAlphaTab(
     return apiRef.current?.score ?? null
   }, [])
 
+  const getApi = useCallback(() => {
+    return apiRef.current
+  }, [])
+
   const changeTrackProgram = useCallback(
     (track: alphaTab.model.Track, program: number) => {
       const api = apiRef.current
       if (!api || !api.score) return
       track.playbackInfo.program = program
-      // Re-render the score to regenerate the MIDI with the new program
       const trackIndexes = api.tracks.map((t) => t.index)
       api.renderScore(api.score, trackIndexes)
     },
@@ -219,6 +245,77 @@ export function useAlphaTab(
     []
   )
 
+  const setZoom = useCallback((scale: number) => {
+    const api = apiRef.current
+    if (!api) return
+    const clamped = Math.round(Math.max(0.3, Math.min(3.0, scale)) * 100) / 100
+    api.settings.display.scale = clamped
+    api.updateSettings()
+    api.render()
+    setZoomState(clamped)
+    localStorage.setItem('zoom', String(clamped))
+  }, [])
+
+  const exportPdf = useCallback(() => {
+    const api = apiRef.current
+    if (!api) return
+    // Always print with light colors so glyphs are visible on white paper
+    api.print(undefined, {
+      display: {
+        resources: {
+          mainGlyphColor: '#000000',
+          secondaryGlyphColor: 'rgba(0,0,0,0.4)',
+          scoreInfoColor: '#000000',
+          barSeparatorColor: '#222211',
+          barNumberColor: '#c80000',
+          staffLineColor: '#a5a5a5'
+        }
+      }
+    })
+  }, [])
+
+  const exportMidi = useCallback(() => {
+    apiRef.current?.downloadMidi()
+  }, [])
+
+  const exportAlphaTex = useCallback(async () => {
+    const api = apiRef.current
+    if (!api?.score) return
+    const exporter = new alphaTab.exporter.AlphaTexExporter()
+    exporter.export(api.score)
+    const tex = exporter.toString()
+    await window.api.saveExport(
+      Array.from(new TextEncoder().encode(tex)),
+      'score.alphatex',
+      [{ name: 'AlphaTex', extensions: ['alphatex', 'tex', 'txt'] }]
+    )
+  }, [])
+
+  const setPlaybackRange = useCallback((range: PlaybackRange | null) => {
+    const api = apiRef.current
+    if (!api) return
+    if (range) {
+      const pr = new alphaTab.synth.PlaybackRange()
+      pr.startTick = range.startTick
+      pr.endTick = range.endTick
+      api.playbackRange = pr
+    } else {
+      api.playbackRange = null
+    }
+  }, [])
+
+  const setLooping = useCallback((enabled: boolean) => {
+    const api = apiRef.current
+    if (!api) return
+    api.isLooping = enabled
+  }, [])
+
+  const setCountIn = useCallback((volume: number) => {
+    const api = apiRef.current
+    if (!api) return
+    api.countInVolume = volume
+  }, [])
+
   const state: AlphaTabState = {
     api: apiRef.current,
     score,
@@ -228,6 +325,7 @@ export function useAlphaTab(
     isLoading,
     isPlayerReady,
     tempo,
+    zoom,
     staveProfile
   }
 
@@ -242,8 +340,16 @@ export function useAlphaTab(
     soloTrack,
     loadTex,
     getScore,
+    getApi,
     changeTrackProgram,
-    setStaveProfile
+    setStaveProfile,
+    setZoom,
+    exportPdf,
+    exportMidi,
+    exportAlphaTex,
+    setPlaybackRange,
+    setLooping,
+    setCountIn
   }
 
   return [state, actions]

@@ -17,9 +17,15 @@ import {
   Moon,
   Music,
   TableProperties,
-  Rows3
+  Rows3,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Minimize2,
+  Repeat
 } from 'lucide-react'
 import { AlphaTabState, AlphaTabActions } from '@/hooks/useAlphaTab'
+import { ExportMenu } from '@/components/ExportMenu'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 
@@ -29,8 +35,12 @@ interface ToolbarProps {
   fileName: string | null
   filePath: string | null
   isDirty: boolean
+  isFullscreen: boolean
+  isPracticeModeActive: boolean
   onFileOpened: (result: { data: number[]; filePath: string; fileName: string }) => void
   onDirtyChange: (dirty: boolean) => void
+  onToggleFullscreen: () => void
+  onTogglePracticeMode: () => void
 }
 
 export function Toolbar({
@@ -39,8 +49,12 @@ export function Toolbar({
   fileName,
   filePath,
   isDirty,
+  isFullscreen,
+  isPracticeModeActive,
   onFileOpened,
-  onDirtyChange
+  onDirtyChange,
+  onToggleFullscreen,
+  onTogglePracticeMode
 }: ToolbarProps) {
   const isPlaying = state.playerState === alphaTab.synth.PlayerState.Playing
   const { theme, toggleTheme } = useTheme()
@@ -137,6 +151,8 @@ export function Toolbar({
           </TooltipTrigger>
           <TooltipContent>Save As</TooltipContent>
         </Tooltip>
+
+        <ExportMenu actions={actions} disabled={!state.score} />
       </div>
 
       {/* Spacer */}
@@ -232,10 +248,43 @@ export function Toolbar({
         </Tooltip>
       </div>
 
+      {/* Zoom controls */}
+      <div className="ml-3 flex items-center gap-1 no-drag">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => actions.setZoom(state.zoom - 0.1)}
+              className="no-drag h-7 w-7"
+            >
+              <ZoomOut className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Zoom Out</TooltipContent>
+        </Tooltip>
+        <span className="w-10 text-center font-mono text-[10px] font-medium text-[var(--text-secondary)]">
+          {Math.round(state.zoom * 100)}%
+        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => actions.setZoom(state.zoom + 0.1)}
+              className="no-drag h-7 w-7"
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Zoom In</TooltipContent>
+        </Tooltip>
+      </div>
+
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Right zone: Sliders + file info + theme */}
+      {/* Right zone: Sliders + file info + theme + fullscreen */}
       <div className="flex items-center gap-3 no-drag">
         {/* Tempo */}
         <div className="flex items-center gap-2">
@@ -288,6 +337,21 @@ export function Toolbar({
 
         <Separator orientation="vertical" className="mx-0.5 h-6" />
 
+        {/* Practice mode toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onTogglePracticeMode}
+              className={cn('no-drag', isPracticeModeActive && 'text-[var(--accent-amber)]')}
+            >
+              <Repeat className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Practice Mode (Ctrl+L)</TooltipContent>
+        </Tooltip>
+
         {/* Theme toggle */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -300,6 +364,20 @@ export function Toolbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</TooltipContent>
+        </Tooltip>
+
+        {/* Fullscreen toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onToggleFullscreen} className="no-drag">
+              {isFullscreen ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'} (F11)</TooltipContent>
         </Tooltip>
       </div>
     </div>

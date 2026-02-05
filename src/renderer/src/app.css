@@ -219,6 +219,12 @@ textarea {
   background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
 }
 
+.practice-loop-active .at-selection div {
+  background: color-mix(in srgb, var(--accent-amber) 15%, transparent);
+  border-left: 2px solid var(--accent-amber);
+  border-right: 2px solid var(--accent-amber);
+}
+
 .at-cursor-beat {
   background: color-mix(in srgb, var(--accent-primary) 75%, transparent);
   width: 3px;

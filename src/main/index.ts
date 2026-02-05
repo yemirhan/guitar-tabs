@@ -21,9 +21,21 @@ function createWindow(): BrowserWindow {
     mainWindow.show();
   });
 
+  // Allow alphaTab print popup, deny all others
   mainWindow.webContents.setWindowOpenHandler((details) => {
+    if (details.url === "about:blank" || details.url === "") {
+      return { action: "allow" };
+    }
     shell.openExternal(details.url);
     return { action: "deny" };
+  });
+
+  // Fullscreen events
+  mainWindow.on("enter-full-screen", () => {
+    mainWindow.webContents.send("fullscreen-changed", true);
+  });
+  mainWindow.on("leave-full-screen", () => {
+    mainWindow.webContents.send("fullscreen-changed", false);
   });
 
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
@@ -114,6 +126,47 @@ app.whenReady().then(() => {
       return { error: "READ_ERROR" as const };
     }
   });
+
+  // IPC: Toggle fullscreen
+  ipcMain.handle("window:toggleFullscreen", async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      win.setFullScreen(!win.isFullScreen());
+    }
+  });
+
+  // IPC: Check fullscreen state
+  ipcMain.handle("window:isFullscreen", async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return win?.isFullScreen() ?? false;
+  });
+
+  // IPC: Save export buffer with dialog
+  ipcMain.handle(
+    "export:saveBuffer",
+    async (
+      _event,
+      data: number[],
+      defaultName: string,
+      filters: { name: string; extensions: string[] }[],
+    ) => {
+      const result = await dialog.showSaveDialog({
+        defaultPath: defaultName,
+        filters,
+      });
+
+      if (result.canceled || !result.filePath) {
+        return false;
+      }
+
+      try {
+        writeFileSync(result.filePath, Buffer.from(new Uint8Array(data)));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+  );
 
   createWindow();
 
