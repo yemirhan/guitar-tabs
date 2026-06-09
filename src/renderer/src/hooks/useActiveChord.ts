@@ -48,7 +48,8 @@ function detectChordName(midiNotes: number[]): string {
 
 export function useActiveChord(
   api: alphaTab.AlphaTabApi | null,
-  tuning: number[]
+  tuning: number[],
+  trackIndex: number | null
 ): ActiveChord | null {
   const [chord, setChord] = useState<ActiveChord | null>(null)
 
@@ -56,14 +57,21 @@ export function useActiveChord(
     if (!api) return
 
     const onActiveBeatsChanged = (e: alphaTab.ActiveBeatsChangedEventArgs) => {
+      // activeBeatsChanged fires for ALL tracks; only consider the displayed one
+      const activeBeats = e.activeBeats.filter(
+        (beat) => beat.voice.bar.staff.track.index === trackIndex
+      )
+
       // First check for explicit chord annotation
-      for (const beat of e.activeBeats) {
+      for (const beat of activeBeats) {
         if (beat.chord) {
           const c = beat.chord
           setChord({
             name: c.name,
             firstFret: c.firstFret,
-            strings: c.strings ? [...c.strings] : [],
+            // alphaTab Chord.strings is ordered highest -> lowest string;
+            // ChordDiagram draws index 0 at the left (lowest string), so reverse.
+            strings: c.strings ? [...c.strings].reverse() : [],
             barreFrets: c.barreFrets ? [...c.barreFrets] : []
           })
           return
@@ -75,13 +83,16 @@ export function useActiveChord(
       const strings: number[] = new Array(numStrings).fill(-1)
       const midiNotes: number[] = []
 
-      for (const beat of e.activeBeats) {
+      for (const beat of activeBeats) {
         for (const note of beat.notes) {
+          if (!note.isStringed || note.fret < 0) continue
           const strIdx = note.string - 1
           if (strIdx >= 0 && strIdx < numStrings) {
             strings[strIdx] = note.fret
-            if (tuning[strIdx] !== undefined) {
-              midiNotes.push(tuning[strIdx] + note.fret)
+            // alphaTab: string 1 = lowest pitch, but tuning[0] = highest pitch
+            const midi = tuning[numStrings - note.string]
+            if (midi !== undefined) {
+              midiNotes.push(midi + note.fret)
             }
           }
         }
@@ -104,7 +115,7 @@ export function useActiveChord(
     return () => {
       api.activeBeatsChanged.off(onActiveBeatsChanged)
     }
-  }, [api, tuning])
+  }, [api, tuning, trackIndex])
 
   return chord
 }

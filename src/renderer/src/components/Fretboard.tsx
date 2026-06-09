@@ -79,11 +79,11 @@ const StaticElements = memo(function StaticElements({
     />
   )
 
-  // Strings and labels (reversed: string 1 = highest pitch = top)
+  // Strings and labels: tuning[0] = highest pitch, drawn at the top
+  // (matches the note circles, which place string 1 = lowest pitch at the bottom)
   for (let s = 0; s < numStrings; s++) {
     const y = PADDING_Y + s * STRING_SPACING
-    // alphaTab string numbering: 1 = lowest pitch, so reverse for display
-    const stringIndex = numStrings - 1 - s
+    const stringIndex = s
     strings.push(
       <line
         key={`string-${s}`}

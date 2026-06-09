@@ -27,6 +27,8 @@ export interface AlphaTabActions {
   setVolume: (vol: number) => void
   selectTrack: (track: alphaTab.model.Track, append?: boolean) => void
   muteTrack: (track: alphaTab.model.Track, mute: boolean) => void
+  muteAllTracks: () => void
+  unmuteAllTracks: () => void
   soloTrack: (track: alphaTab.model.Track, solo: boolean) => void
   loadTex: (tex: string) => void
   getScore: () => alphaTab.model.Score | null
@@ -93,6 +95,7 @@ export function useAlphaTab(
     const settings = new alphaTab.Settings()
     settings.core.fontDirectory = 'font/'
     settings.player.enablePlayer = true
+    settings.player.playerMode = alphaTab.PlayerMode.EnabledSynthesizer
     settings.player.soundFont = 'soundfont/sonivox.sf2'
     settings.player.scrollElement = viewport
     settings.player.scrollOffsetY = -30
@@ -202,11 +205,32 @@ export function useAlphaTab(
   )
 
   const muteTrack = useCallback((track: alphaTab.model.Track, mute: boolean) => {
-    apiRef.current?.changeTrackMute([track], mute)
+    const api = apiRef.current
+    if (!api?.score) return
+    api.changeTrackMute([track], mute)
+    setTracks([...api.score.tracks])
   }, [])
 
   const soloTrack = useCallback((track: alphaTab.model.Track, solo: boolean) => {
-    apiRef.current?.changeTrackSolo([track], solo)
+    const api = apiRef.current
+    if (!api?.score) return
+    api.changeTrackSolo([track], solo)
+    setTracks([...api.score.tracks])
+  }, [])
+
+  const muteAllTracks = useCallback(() => {
+    const api = apiRef.current
+    if (!api?.score || api.score.tracks.length === 0) return
+    api.changeTrackMute(api.score.tracks, true)
+    setTracks([...api.score.tracks])
+  }, [])
+
+  const unmuteAllTracks = useCallback(() => {
+    const api = apiRef.current
+    if (!api?.score || api.score.tracks.length === 0) return
+    api.changeTrackMute(api.score.tracks, false)
+    api.changeTrackSolo(api.score.tracks, false)
+    setTracks([...api.score.tracks])
   }, [])
 
   const loadTex = useCallback((tex: string) => {
@@ -225,9 +249,28 @@ export function useAlphaTab(
     (track: alphaTab.model.Track, program: number) => {
       const api = apiRef.current
       if (!api || !api.score) return
+
+      // Program changes require MIDI regeneration so the synth receives new patch events.
       track.playbackInfo.program = program
-      const trackIndexes = api.tracks.map((t) => t.index)
-      api.renderScore(api.score, trackIndexes)
+
+      // Some files store explicit per-beat instrument automations that override track program.
+      // Keep them in sync with the selected program so playback actually changes timbre.
+      for (const staff of track.staves) {
+        for (const bar of staff.bars) {
+          for (const voice of bar.voices) {
+            for (const beat of voice.beats) {
+              for (const automation of beat.automations) {
+                if (automation.type === alphaTab.model.AutomationType.Instrument) {
+                  automation.value = program
+                }
+              }
+            }
+          }
+        }
+      }
+
+      api.loadMidiForScore()
+      setTracks([...api.score.tracks])
     },
     []
   )
@@ -337,6 +380,8 @@ export function useAlphaTab(
     setVolume,
     selectTrack,
     muteTrack,
+    muteAllTracks,
+    unmuteAllTracks,
     soloTrack,
     loadTex,
     getScore,

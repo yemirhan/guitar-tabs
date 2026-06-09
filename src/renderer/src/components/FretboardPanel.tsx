@@ -16,7 +16,7 @@ interface FretboardPanelProps {
 export function FretboardPanel({ api, selectedTracks }: FretboardPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { activeNotes, tuning, numStrings, numFrets } = useFretboard(api, selectedTracks)
-  const chord = useActiveChord(api, tuning)
+  const chord = useActiveChord(api, tuning, selectedTracks[0]?.index ?? null)
 
   return (
     <div className="shrink-0 border-t border-[var(--border-default)] bg-[var(--bg-surface)]">

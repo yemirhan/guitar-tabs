@@ -1,5 +1,6 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import * as alphaTab from '@coderline/alphatab'
+import { Button } from '@/components/ui/button'
 import { Toggle } from '@/components/ui/toggle'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -104,6 +105,8 @@ interface TrackPanelProps {
 }
 
 export function TrackPanel({ state, actions }: TrackPanelProps) {
+  const [showSoundOptions, setShowSoundOptions] = useState(true)
+
   const handleTrackClick = useCallback(
     (track: alphaTab.model.Track, e: React.MouseEvent) => {
       const append = e.metaKey || e.ctrlKey
@@ -118,6 +121,18 @@ export function TrackPanel({ state, actions }: TrackPanelProps) {
     },
     [actions]
   )
+
+  const handleMuteAll = useCallback(() => {
+    actions.muteAllTracks()
+  }, [actions])
+
+  const handleUnmuteAll = useCallback(() => {
+    actions.unmuteAllTracks()
+  }, [actions])
+
+  const handleToggleSounds = useCallback(() => {
+    setShowSoundOptions((prev) => !prev)
+  }, [])
 
   if (!state.score) {
     return (
@@ -139,13 +154,46 @@ export function TrackPanel({ state, actions }: TrackPanelProps) {
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <div className="flex h-10 items-center justify-between px-3">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--text-dim)]">
-          Tracks
-        </span>
-        <span className="rounded-full bg-[var(--bg-surface-raised)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-dim)]">
-          {state.tracks.length}
-        </span>
+      <div className="flex flex-col gap-2 px-3 py-2">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--text-dim)]">
+            Tracks
+          </span>
+          <span className="rounded-full bg-[var(--bg-surface-raised)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-dim)]">
+            {state.tracks.length}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleMuteAll}
+            disabled={state.tracks.length === 0}
+            className="h-7 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em]"
+          >
+            Mute all
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleUnmuteAll}
+            disabled={state.tracks.length === 0}
+            className="h-7 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em]"
+          >
+            Unmute all
+          </Button>
+          <Button
+            type="button"
+            variant={showSoundOptions ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={handleToggleSounds}
+            className="h-7 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em]"
+          >
+            Sounds
+          </Button>
+        </div>
       </div>
       <Separator />
       <ScrollArea className="flex-1">
@@ -224,31 +272,32 @@ export function TrackPanel({ state, actions }: TrackPanelProps) {
                   </div>
                 </div>
 
-                {/* Instrument selector */}
-                <div className="mt-1.5 pl-7" onClick={(e) => e.stopPropagation()}>
-                  <Select
-                    value={String(track.playbackInfo.program)}
-                    onValueChange={(value) => handleProgramChange(track, value)}
-                  >
-                    <SelectTrigger className="h-6 w-full text-[10px]">
-                      <SelectValue>
-                        {getInstrumentName(track.playbackInfo.program)}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MIDI_INSTRUMENTS.map((group) => (
-                        <SelectGroup key={group.label}>
-                          <SelectLabel>{group.label}</SelectLabel>
-                          {group.instruments.map((inst) => (
-                            <SelectItem key={inst.program} value={String(inst.program)}>
-                              {inst.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {showSoundOptions && (
+                  <div className="mt-1.5 pl-7" onClick={(e) => e.stopPropagation()}>
+                    <Select
+                      value={String(track.playbackInfo.program)}
+                      onValueChange={(value) => handleProgramChange(track, value)}
+                    >
+                      <SelectTrigger className="h-6 w-full text-[10px]">
+                        <SelectValue>
+                          {getInstrumentName(track.playbackInfo.program)}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MIDI_INSTRUMENTS.map((group) => (
+                          <SelectGroup key={group.label}>
+                            <SelectLabel>{group.label}</SelectLabel>
+                            {group.instruments.map((inst) => (
+                              <SelectItem key={inst.program} value={String(inst.program)}>
+                                {inst.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )
           })}

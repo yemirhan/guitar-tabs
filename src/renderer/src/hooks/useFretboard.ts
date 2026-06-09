@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import * as alphaTab from '@coderline/alphatab'
 
 export interface FretPosition {
@@ -28,7 +28,15 @@ export function useFretboard(
   apiRef.current = api
 
   const track = selectedTracks[0] ?? null
-  const tuning = track?.staves[0]?.tuning ?? []
+  // activeBeatsChanged fires for ALL tracks; only the displayed track's notes
+  // belong on this fretboard. Ref keeps the subscription stable across renders.
+  const trackIndexRef = useRef<number | null>(null)
+  trackIndexRef.current = track?.index ?? null
+  // Stable reference: a new array every render makes consumers' effect deps
+  // (e.g. useActiveChord) re-run each render, and alphaTab replays the last
+  // activeBeatsChanged event synchronously on every .on(), causing an
+  // infinite setState loop during playback.
+  const tuning = useMemo(() => [...(track?.staves[0]?.tuning ?? [])], [track])
   const numStrings = tuning.length || 6
   const numFrets = 22
 
@@ -38,7 +46,10 @@ export function useFretboard(
     const onActiveBeatsChanged = (e: alphaTab.ActiveBeatsChangedEventArgs) => {
       const notes: FretPosition[] = []
       for (const beat of e.activeBeats) {
+        if (beat.voice.bar.staff.track.index !== trackIndexRef.current) continue
         for (const note of beat.notes) {
+          // Percussion/unfretted notes report string=-1 / fret=-1
+          if (!note.isStringed || note.string < 1 || note.fret < 0) continue
           notes.push({ string: note.string, fret: note.fret })
         }
       }
@@ -52,5 +63,5 @@ export function useFretboard(
     }
   }, [api])
 
-  return { activeNotes, tuning: [...tuning], numStrings, numFrets }
+  return { activeNotes, tuning, numStrings, numFrets }
 }
