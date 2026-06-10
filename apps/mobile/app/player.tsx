@@ -3,10 +3,11 @@ import { ActivityIndicator, View, Alert, useColorScheme } from 'react-native'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { File, Paths } from 'expo-file-system'
 import TabView from '@/components/tab-view'
-import TransportBar from '@/components/transport-bar'
 import TrackPanel from '@/components/track-panel'
 import type { ScoreSummary, TabCommand, TabCommandEnvelope, TrackSummary } from '@gtr/shared'
-import { PLAYER_STATE_PLAYING } from '@gtr/shared'
+import { PLAYER_STATE_PLAYING, MIN_ZOOM, MAX_ZOOM } from '@gtr/shared'
+
+const SPEED_PRESETS = [0.25, 0.5, 0.75, 0.9, 1, 1.25, 1.5, 2]
 
 export default function Player() {
   const { file } = useLocalSearchParams<{ file: string }>()
@@ -43,11 +44,62 @@ export default function Player() {
     setIsLoaded(true)
   }
 
+  const changeSpeed = (s: number) => {
+    setSpeed(s)
+    send({ type: 'setTempo', value: s })
+  }
+
+  const changeZoom = (z: number) => {
+    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z))
+    setZoom(clamped)
+    send({ type: 'setZoom', value: clamped })
+  }
+
   const background = theme === 'dark' ? '#1a1b26' : '#ffffff'
 
   return (
     <View style={{ flex: 1, backgroundColor: background }}>
       <Stack.Screen options={{ title }} />
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon="sidebar.trailing"
+          accessibilityLabel="Toggle track panel"
+          selected={tracksVisible}
+          onPress={() => setTracksVisible((v) => !v)}
+        />
+      </Stack.Toolbar>
+      <Stack.Toolbar placement="bottom">
+        <Stack.Toolbar.Button
+          icon={isPlaying ? 'pause.fill' : 'play.fill'}
+          accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+          variant="prominent"
+          onPress={() => send({ type: 'playPause' })}
+        />
+        <Stack.Toolbar.Button
+          icon="stop.fill"
+          accessibilityLabel="Stop"
+          onPress={() => send({ type: 'stop' })}
+        />
+        <Stack.Toolbar.Spacer />
+        <Stack.Toolbar.Menu title={`${Math.round(speed * 100)}%`} icon="gauge.with.needle">
+          {SPEED_PRESETS.map((s) => (
+            <Stack.Toolbar.MenuAction key={s} isOn={speed === s} onPress={() => changeSpeed(s)}>
+              {`${Math.round(s * 100)}%`}
+            </Stack.Toolbar.MenuAction>
+          ))}
+        </Stack.Toolbar.Menu>
+        <Stack.Toolbar.Spacer />
+        <Stack.Toolbar.Button
+          icon="minus.magnifyingglass"
+          accessibilityLabel="Zoom out"
+          onPress={() => changeZoom(zoom - 0.1)}
+        />
+        <Stack.Toolbar.Button
+          icon="plus.magnifyingglass"
+          accessibilityLabel="Zoom in"
+          onPress={() => changeZoom(zoom + 0.1)}
+        />
+      </Stack.Toolbar>
       <View style={{ flex: 1, flexDirection: 'row' }}>
         <View style={{ flex: 1 }}>
           {!isLoaded && (
@@ -105,25 +157,6 @@ export default function Player() {
             }}
           />
         )}
-      </View>
-      <View style={{ position: 'absolute', bottom: 24, alignSelf: 'center' }} pointerEvents="box-none">
-        <TransportBar
-          isPlaying={isPlaying}
-          speed={speed}
-          zoom={zoom}
-          tracksVisible={tracksVisible}
-          onPlayPause={() => send({ type: 'playPause' })}
-          onStop={() => send({ type: 'stop' })}
-          onSpeedChange={(s) => {
-            setSpeed(s)
-            send({ type: 'setTempo', value: s })
-          }}
-          onZoomChange={(z) => {
-            setZoom(z)
-            send({ type: 'setZoom', value: z })
-          }}
-          onToggleTracks={() => setTracksVisible((v) => !v)}
-        />
       </View>
     </View>
   )
