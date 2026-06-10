@@ -14,6 +14,8 @@ export interface UseAlphaTabOptions {
   soundFontUrl: string
   /** Set false in environments where alphaTab's web workers can't be bundled (Expo DOM components). Default true. */
   useWorkers?: boolean
+  /** Audio output mode. Use WebAudioScriptProcessor where the audio worklet can't be bundled (Expo DOM components). */
+  outputMode?: alphaTab.PlayerOutputMode
   /** Receives export payloads (desktop wires this to the Electron save dialog). */
   onExportFile?: (data: Uint8Array, defaultName: string, filters: ExportFilter[]) => Promise<boolean>
 }
@@ -116,6 +118,9 @@ export function useAlphaTab(
     settings.core.useWorkers = opts.useWorkers ?? true
     settings.player.enablePlayer = true
     settings.player.playerMode = alphaTab.PlayerMode.EnabledSynthesizer
+    if (opts.outputMode !== undefined) {
+      settings.player.outputMode = opts.outputMode
+    }
     settings.player.soundFont = opts.soundFontUrl
     settings.player.scrollElement = viewport
     settings.player.scrollOffsetY = -30
