@@ -89,7 +89,7 @@ export default function Player() {
           />
         )}
       </View>
-      <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+      <View style={{ position: 'absolute', bottom: 24, alignSelf: 'center' }} pointerEvents="box-none">
         <TransportBar
           isPlaying={isPlaying}
           speed={speed}

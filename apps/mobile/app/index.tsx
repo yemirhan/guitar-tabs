@@ -3,6 +3,7 @@ import { FlatList, Pressable, Text, View, Alert } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import * as DocumentPicker from 'expo-document-picker'
 import { Host, Button } from '@expo/ui/swift-ui'
+import { buttonStyle } from '@expo/ui/swift-ui/modifiers'
 import { loadLibrary, importScore, removeScore } from '@/lib/library'
 import type { ProjectEntry } from '@gtr/shared'
 
@@ -78,7 +79,12 @@ export default function Library() {
       />
       <View style={{ alignItems: 'center', padding: 16 }}>
         <Host matchContents>
-          <Button systemImage="plus" label="Import Tab" onPress={pickFile} />
+          <Button
+            systemImage="plus"
+            label="Import Tab"
+            onPress={pickFile}
+            modifiers={[buttonStyle('glassProminent')]}
+          />
         </Host>
       </View>
     </View>

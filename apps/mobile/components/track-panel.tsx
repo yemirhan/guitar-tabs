@@ -27,43 +27,54 @@ export default function TrackPanel({
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={{ padding: 12, gap: 12 }}>
       {tracks.map((track) => (
-        <Pressable
+        <View
           key={track.index}
-          onPress={() => onSelect(track.index)}
           style={{
-            padding: 12,
             borderRadius: 12,
             borderCurve: 'continuous',
+            overflow: 'hidden',
             backgroundColor:
               track.index === selectedIndex ? 'rgba(10,132,255,0.15)' : 'rgba(128,128,128,0.08)'
           }}>
-          <RNText style={{ fontWeight: '600', marginBottom: 8 }} selectable>
-            {track.name || `Track ${track.index + 1}`}
-          </RNText>
-          <Host matchContents>
-            <VStack spacing={8}>
-              <HStack spacing={16}>
-                <Toggle
-                  label="Mute"
-                  isOn={track.isMute}
-                  onIsOnChange={(v) => onMute(track.index, v)}
-                />
-                <Toggle
-                  label="Solo"
-                  isOn={track.isSolo}
-                  onIsOnChange={(v) => onSolo(track.index, v)}
-                />
-              </HStack>
-              <HStack spacing={8}>
-                <Text>Vol</Text>
-                <Slider
-                  value={volumes[track.index] ?? 1}
-                  onValueChange={(v) => onVolume(track.index, v)}
-                />
-              </HStack>
-            </VStack>
-          </Host>
-        </Pressable>
+          {/* Only the title row selects the track — SwiftUI controls must not sit
+              inside a Pressable, or it swallows their gestures. */}
+          <Pressable
+            onPress={() => onSelect(track.index)}
+            style={({ pressed }) => ({
+              padding: 12,
+              paddingBottom: 8,
+              backgroundColor: pressed ? 'rgba(128,128,128,0.12)' : 'transparent'
+            })}>
+            <RNText style={{ fontWeight: '600' }}>
+              {track.name || `Track ${track.index + 1}`}
+            </RNText>
+          </Pressable>
+          <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+            <Host matchContents>
+              <VStack spacing={8}>
+                <HStack spacing={16}>
+                  <Toggle
+                    label="Mute"
+                    isOn={track.isMute}
+                    onIsOnChange={(v) => onMute(track.index, v)}
+                  />
+                  <Toggle
+                    label="Solo"
+                    isOn={track.isSolo}
+                    onIsOnChange={(v) => onSolo(track.index, v)}
+                  />
+                </HStack>
+                <HStack spacing={8}>
+                  <Text>Vol</Text>
+                  <Slider
+                    value={volumes[track.index] ?? 1}
+                    onValueChange={(v) => onVolume(track.index, v)}
+                  />
+                </HStack>
+              </VStack>
+            </Host>
+          </View>
+        </View>
       ))}
     </ScrollView>
   )
