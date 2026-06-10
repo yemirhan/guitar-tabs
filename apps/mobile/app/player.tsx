@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, View, Alert, useColorScheme } from 'react-native'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { File, Paths } from 'expo-file-system'
 import TabView from '@/components/tab-view'
-import TrackPanel from '@/components/track-panel'
+import TrackSheet from '@/components/track-sheet'
 import type { ScoreSummary, TabCommand, TabCommandEnvelope, TrackSummary } from '@gtr/shared'
 import { PLAYER_STATE_PLAYING, MIN_ZOOM, MAX_ZOOM } from '@gtr/shared'
 
@@ -14,6 +15,9 @@ export default function Player() {
   const router = useRouter()
   const colorScheme = useColorScheme()
   const theme = colorScheme === 'light' ? 'light' : 'dark'
+  const insets = useSafeAreaInsets()
+  // Status bar + the floating glass nav bar the notation scrolls under.
+  const topInset = insets.top + 56
 
   const seqRef = useRef(0)
   const [command, setCommand] = useState<TabCommandEnvelope | null>(null)
@@ -59,7 +63,7 @@ export default function Player() {
 
   return (
     <View style={{ flex: 1, backgroundColor: background }}>
-      <Stack.Screen options={{ title }} />
+      <Stack.Screen options={{ title, headerTransparent: true }} />
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
           icon="sidebar.trailing"
@@ -100,7 +104,7 @@ export default function Player() {
           onPress={() => changeZoom(zoom + 0.1)}
         />
       </Stack.Toolbar>
-      <View style={{ flex: 1, flexDirection: 'row' }}>
+      <View style={{ flex: 1 }}>
         <View style={{ flex: 1 }}>
           {!isLoaded && (
             <View
@@ -119,6 +123,7 @@ export default function Player() {
             fileBase64={fileBase64}
             texBase64={null}
             theme={theme}
+            topInset={topInset}
             command={command}
             onScoreLoaded={onScoreLoaded}
             onPlayerStateChanged={async (st) => setIsPlaying(st === PLAYER_STATE_PLAYING)}
@@ -134,29 +139,29 @@ export default function Player() {
             }}
           />
         </View>
-        {tracksVisible && (
-          <TrackPanel
-            tracks={tracks}
-            selectedIndex={selectedIndex}
-            volumes={volumes}
-            onSelect={(i) => {
-              setSelectedIndex(i)
-              send({ type: 'selectTrack', trackIndex: i })
-            }}
-            onMute={(i, v) => {
-              setTracks((prev) => prev.map((t) => (t.index === i ? { ...t, isMute: v } : t)))
-              send({ type: 'muteTrack', trackIndex: i, value: v })
-            }}
-            onSolo={(i, v) => {
-              setTracks((prev) => prev.map((t) => (t.index === i ? { ...t, isSolo: v } : t)))
-              send({ type: 'soloTrack', trackIndex: i, value: v })
-            }}
-            onVolume={(i, v) => {
-              setVolumes((prev) => ({ ...prev, [i]: v }))
-              send({ type: 'setTrackVolume', trackIndex: i, value: v })
-            }}
-          />
-        )}
+        <TrackSheet
+          isPresented={tracksVisible}
+          onIsPresentedChange={setTracksVisible}
+          tracks={tracks}
+          selectedIndex={selectedIndex}
+          volumes={volumes}
+          onSelect={(i) => {
+            setSelectedIndex(i)
+            send({ type: 'selectTrack', trackIndex: i })
+          }}
+          onMute={(i, v) => {
+            setTracks((prev) => prev.map((t) => (t.index === i ? { ...t, isMute: v } : t)))
+            send({ type: 'muteTrack', trackIndex: i, value: v })
+          }}
+          onSolo={(i, v) => {
+            setTracks((prev) => prev.map((t) => (t.index === i ? { ...t, isSolo: v } : t)))
+            send({ type: 'soloTrack', trackIndex: i, value: v })
+          }}
+          onVolume={(i, v) => {
+            setVolumes((prev) => ({ ...prev, [i]: v }))
+            send({ type: 'setTrackVolume', trackIndex: i, value: v })
+          }}
+        />
       </View>
     </View>
   )

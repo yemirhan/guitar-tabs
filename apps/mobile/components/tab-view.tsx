@@ -11,6 +11,8 @@ interface Props {
    *  inlines them into a JS template literal, which mangles backslashes and quotes. */
   texBase64: string | null
   theme: 'light' | 'dark'
+  /** Space reserved for a transparent native header; content scrolls under it. */
+  topInset?: number
   command: TabCommandEnvelope | null
   onScoreLoaded: (summary: ScoreSummary) => Promise<void>
   onPlayerStateChanged: (playerState: number) => Promise<void>
@@ -57,6 +59,7 @@ export default function TabView({
   fileBase64,
   texBase64,
   theme,
+  topInset = 0,
   command,
   onScoreLoaded,
   onPlayerStateChanged,
@@ -72,7 +75,8 @@ export default function TabView({
     soundFontUrl: '/soundfont/sonivox.sf2',
     useWorkers: false,
     // Metro cannot bundle alphaTab's audio worklet; script-processor audio runs on the main thread.
-    outputMode: alphaTab.PlayerOutputMode.WebAudioScriptProcessor
+    outputMode: alphaTab.PlayerOutputMode.WebAudioScriptProcessor,
+    scrollOffsetY: -(topInset + 30)
   })
 
   useEffect(() => {
@@ -192,7 +196,10 @@ export default function TabView({
           stroke: ${accent};
         }
       `}</style>
-      <div ref={containerRef} />
+      {/* Inside the scroller so notation slides under the transparent header. */}
+      <div style={{ paddingTop: topInset }}>
+        <div ref={containerRef} />
+      </div>
     </div>
   )
 }

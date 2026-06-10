@@ -16,6 +16,8 @@ export interface UseAlphaTabOptions {
   useWorkers?: boolean
   /** Audio output mode. Use WebAudioScriptProcessor where the audio worklet can't be bundled (Expo DOM components). */
   outputMode?: alphaTab.PlayerOutputMode
+  /** Auto-scroll offset from the viewport top (negative scrolls the target lower). Default -30. */
+  scrollOffsetY?: number
   /** Receives export payloads (desktop wires this to the Electron save dialog). */
   onExportFile?: (data: Uint8Array, defaultName: string, filters: ExportFilter[]) => Promise<boolean>
 }
@@ -123,7 +125,7 @@ export function useAlphaTab(
     }
     settings.player.soundFont = opts.soundFontUrl
     settings.player.scrollElement = viewport
-    settings.player.scrollOffsetY = -30
+    settings.player.scrollOffsetY = opts.scrollOffsetY ?? -30
     settings.display.layoutMode = alphaTab.LayoutMode.Page
     const savedProfile = localStorage.getItem('staveProfile')
     if (savedProfile !== null) {
