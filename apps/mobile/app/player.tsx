@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { View, Alert, useColorScheme } from 'react-native'
+import { ActivityIndicator, View, Alert, useColorScheme } from 'react-native'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { File, Paths } from 'expo-file-system'
 import TabView from '@/components/tab-view'
@@ -19,6 +19,7 @@ export default function Player() {
   const send = (cmd: TabCommand) => setCommand({ seq: ++seqRef.current, cmd })
 
   const [title, setTitle] = useState('')
+  const [isLoaded, setIsLoaded] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [zoom, setZoom] = useState(1)
@@ -39,13 +40,29 @@ export default function Player() {
   const onScoreLoaded = async (summary: ScoreSummary) => {
     setTitle(summary.title || file || 'Untitled')
     setTracks(summary.tracks)
+    setIsLoaded(true)
   }
 
+  const background = theme === 'dark' ? '#1a1b26' : '#ffffff'
+
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: background }}>
       <Stack.Screen options={{ title }} />
       <View style={{ flex: 1, flexDirection: 'row' }}>
         <View style={{ flex: 1 }}>
+          {!isLoaded && (
+            <View
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: background
+              }}>
+              <ActivityIndicator size="large" />
+            </View>
+          )}
           <TabView
             fileBase64={fileBase64}
             texBase64={null}

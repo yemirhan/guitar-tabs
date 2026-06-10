@@ -1,5 +1,5 @@
 import { Host, HStack, Button, Slider, Text, GlassEffectContainer } from '@expo/ui/swift-ui'
-import { buttonStyle, glassEffect, padding } from '@expo/ui/swift-ui/modifiers'
+import { buttonStyle, font, frame, glassEffect, padding } from '@expo/ui/swift-ui/modifiers'
 import { MIN_ZOOM, MAX_ZOOM } from '@gtr/shared'
 
 interface Props {
@@ -44,12 +44,16 @@ export default function TransportBar({
             onPress={onStop}
             modifiers={[buttonStyle('glass')]}
           />
-          <Text>{`${Math.round(speed * 100)}%`}</Text>
+          <Text
+            modifiers={[font({ size: 15, weight: 'medium', design: 'monospaced' }), frame({ width: 52 })]}>
+            {`${Math.round(speed * 100)}%`}
+          </Text>
           <Slider
             value={speed}
             min={MIN_SPEED}
             max={MAX_SPEED}
             onValueChange={(v) => onSpeedChange(Math.round(v * 20) / 20)} // snap to 5% steps
+            modifiers={[frame({ width: 160 })]}
           />
           <Button
             systemImage="minus.magnifyingglass"
