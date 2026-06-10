@@ -161,6 +161,8 @@ export default function TabView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command])
 
+  const accent = theme === 'dark' ? '#0a84ff' : '#007aff'
+
   return (
     <div
       ref={viewportRef}
@@ -173,6 +175,23 @@ export default function TabView({
         background: theme === 'dark' ? '#1a1b26' : '#ffffff'
       }}
     >
+      {/* alphaTab injects cursor/selection elements but leaves them unstyled. */}
+      <style>{`
+        .at-cursor-bar {
+          background: ${theme === 'dark' ? 'rgba(255, 184, 108, 0.22)' : 'rgba(255, 159, 10, 0.18)'};
+        }
+        .at-cursor-beat {
+          background: ${accent}c0;
+          width: 3px;
+        }
+        .at-selection div {
+          background: ${accent}1a;
+        }
+        .at-highlight * {
+          fill: ${accent};
+          stroke: ${accent};
+        }
+      `}</style>
       <div ref={containerRef} />
     </div>
   )
