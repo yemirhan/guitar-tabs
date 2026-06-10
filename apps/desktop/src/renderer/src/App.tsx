@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import * as alphaTab from '@coderline/alphatab'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { useAlphaTab } from '@/hooks/useAlphaTab'
+import { useAlphaTab } from '@gtr/shared/web'
 import { useResizable } from '@/hooks/useResizable'
 import { useProjects } from '@/hooks/useProjects'
 import { usePracticeMode } from '@/hooks/usePracticeMode'
@@ -21,7 +21,12 @@ export default function App() {
   const { theme } = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
-  const [state, actions] = useAlphaTab(containerRef, viewportRef, theme)
+  const [state, actions] = useAlphaTab(containerRef, viewportRef, theme, {
+    fontDirectory: 'font/',
+    soundFontUrl: 'soundfont/sonivox.sf2',
+    onExportFile: (data, defaultName, filters) =>
+      window.api.saveExport(Array.from(data), defaultName, filters)
+  })
   const { width: trackPanelWidth, onMouseDown: onResizeMouseDown, isDragging: isResizing } = useResizable({
     initialWidth: 224,
     minWidth: 160,

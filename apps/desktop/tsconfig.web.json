@@ -13,6 +13,7 @@
   },
   "include": [
     "src/renderer/src/**/*",
-    "src/renderer/*.d.ts"
+    "src/renderer/*.d.ts",
+    "../../packages/shared/src/**/*"
   ]
 }

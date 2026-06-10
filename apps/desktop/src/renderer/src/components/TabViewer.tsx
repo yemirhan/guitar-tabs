@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { AlphaTabState } from '@/hooks/useAlphaTab'
+import { AlphaTabState } from '@gtr/shared/web'
 import { cn } from '@/lib/utils'
 
 const VALID_EXTENSIONS = ['.gp', '.gp3', '.gp4', '.gp5', '.gpx', '.gp7']

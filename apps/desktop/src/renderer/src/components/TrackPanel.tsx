@@ -14,7 +14,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { AlphaTabState, AlphaTabActions } from '@/hooks/useAlphaTab'
+import { AlphaTabState, AlphaTabActions } from '@gtr/shared/web'
 import { cn } from '@/lib/utils'
 
 /**

@@ -1,10 +1,7 @@
 import { useState, useCallback } from 'react'
+import type { ProjectEntry } from '@gtr/shared'
 
-export interface ProjectEntry {
-  filePath: string
-  fileName: string
-  addedAt: number
-}
+export type { ProjectEntry }
 
 const STORAGE_KEY = 'guitar-tab-reader-projects'
 

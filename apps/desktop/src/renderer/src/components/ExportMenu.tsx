@@ -2,7 +2,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Download, FileText, Music, FileCode, FileType } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { AlphaTabActions } from '@/hooks/useAlphaTab'
+import { AlphaTabActions } from '@gtr/shared/web'
 
 interface ExportMenuProps {
   actions: AlphaTabActions

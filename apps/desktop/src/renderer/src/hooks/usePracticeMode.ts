@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import * as alphaTab from '@coderline/alphatab'
-import type { AlphaTabActions, PlaybackRange } from './useAlphaTab'
+import type { AlphaTabActions, PlaybackRange } from '@gtr/shared/web'
 
 export interface PracticeModeState {
   isActive: boolean

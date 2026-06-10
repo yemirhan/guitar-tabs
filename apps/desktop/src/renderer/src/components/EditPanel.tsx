@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ChevronDown, ChevronUp, Play } from 'lucide-react'
-import { AlphaTabActions } from '@/hooks/useAlphaTab'
+import { AlphaTabActions } from '@gtr/shared/web'
 import { cn } from '@/lib/utils'
 
 interface EditPanelProps {

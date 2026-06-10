@@ -24,7 +24,7 @@ import {
   Minimize2,
   Repeat
 } from 'lucide-react'
-import { AlphaTabState, AlphaTabActions } from '@/hooks/useAlphaTab'
+import { AlphaTabState, AlphaTabActions } from '@gtr/shared/web'
 import { ExportMenu } from '@/components/ExportMenu'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
