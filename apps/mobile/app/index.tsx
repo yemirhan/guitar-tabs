@@ -1,42 +1,86 @@
-import { useRef, useState } from 'react'
-import { View, Alert } from 'react-native'
-import { Host, HStack, Button } from '@expo/ui/swift-ui'
-import TabView from '@/components/tab-view'
-import type { TabCommand, TabCommandEnvelope } from '@gtr/shared'
+import { useCallback, useState } from 'react'
+import { FlatList, Pressable, Text, View, Alert } from 'react-native'
+import { useFocusEffect, useRouter } from 'expo-router'
+import * as DocumentPicker from 'expo-document-picker'
+import { Host, Button } from '@expo/ui/swift-ui'
+import { loadLibrary, importScore, removeScore } from '@/lib/library'
+import type { ProjectEntry } from '@gtr/shared'
 
-const DEMO_TEX = `\\title "Smoke Test"
-.
-\\track "Guitar"
-\\tuning e5 b4 g4 d4 a3 e3
-3.3 5.3 7.3 8.3 | 7.3 5.3 3.3.8 0.3.8`
+export default function Library() {
+  const router = useRouter()
+  const [entries, setEntries] = useState<ProjectEntry[]>([])
 
-export default function Smoke() {
-  const seqRef = useRef(0)
-  const [command, setCommand] = useState<TabCommandEnvelope | null>(null)
-  const send = (cmd: TabCommand) => setCommand({ seq: ++seqRef.current, cmd })
+  useFocusEffect(
+    useCallback(() => {
+      setEntries(loadLibrary())
+    }, [])
+  )
+
+  const pickFile = async () => {
+    const res = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      type: '*/*'
+    })
+    if (res.canceled || !res.assets?.length) return
+    const asset = res.assets[0]
+    try {
+      setEntries(await importScore(asset.uri, asset.name))
+    } catch (e) {
+      Alert.alert('Import failed', String(e))
+    }
+  }
+
+  const confirmRemove = (entry: ProjectEntry) => {
+    Alert.alert('Remove tab?', entry.fileName, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => setEntries(removeScore(entry.fileName))
+      }
+    ])
+  }
 
   return (
     <View style={{ flex: 1 }}>
-      <TabView
-        fileBase64={null}
-        texBase64={btoa(DEMO_TEX)}
-        theme="light"
-        command={command}
-        onScoreLoaded={async (s) => console.log('score loaded:', s.title, s.tracks.length)}
-        onPlayerStateChanged={async (st) => console.log('player state:', st)}
-        onError={async (msg) => Alert.alert('alphaTab error', msg)}
-        dom={{
-          style: { flex: 1 },
-          scrollEnabled: false,
-          mediaPlaybackRequiresUserAction: false
-        }}
+      <FlatList
+        data={entries}
+        keyExtractor={(e) => e.fileName}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ padding: 16, gap: 8 }}
+        ListEmptyComponent={
+          <View style={{ alignItems: 'center', paddingTop: 80, gap: 8 }}>
+            <Text style={{ fontSize: 17, fontWeight: '600' }}>No tabs yet</Text>
+            <Text style={{ opacity: 0.6 }}>Import a Guitar Pro file to get started.</Text>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/player', params: { file: item.fileName } })
+            }
+            onLongPress={() => confirmRemove(item)}
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              borderCurve: 'continuous',
+              backgroundColor: 'rgba(128,128,128,0.08)',
+              gap: 4
+            }}>
+            <Text style={{ fontSize: 17, fontWeight: '600' }} selectable>
+              {item.fileName}
+            </Text>
+            <Text style={{ opacity: 0.6, fontSize: 13 }}>
+              Added {new Date(item.addedAt).toLocaleDateString()}
+            </Text>
+          </Pressable>
+        )}
       />
-      <Host matchContents>
-        <HStack spacing={24}>
-          <Button systemImage="play.fill" label="Play" onPress={() => send({ type: 'playPause' })} />
-          <Button systemImage="stop.fill" label="Stop" onPress={() => send({ type: 'stop' })} />
-        </HStack>
-      </Host>
+      <View style={{ alignItems: 'center', padding: 16 }}>
+        <Host matchContents>
+          <Button systemImage="plus" label="Import Tab" onPress={pickFile} />
+        </Host>
+      </View>
     </View>
   )
 }
