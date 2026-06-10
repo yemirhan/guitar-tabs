@@ -1,6 +1,9 @@
 appId: com.guitar-tab-reader
 productName: Guitar Tab Reader
 
+# No native modules; the dependency-install step also deadlocks under npm workspaces.
+npmRebuild: false
+
 directories:
   output: dist
   buildResources: build
