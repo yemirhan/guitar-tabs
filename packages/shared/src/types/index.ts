@@ -33,6 +33,20 @@ export interface ScoreSummary {
   title: string
   artist: string
   tracks: TrackSummary[]
+  /** Number of master bars; drives practice-range pickers. */
+  barCount?: number
+}
+
+export interface PracticeConfig {
+  startBar: number
+  endBar: number
+  /** Playback speed for the loop (1 = 100%). */
+  loopTempo: number
+  gradualIncrease: boolean
+  /** Speed added after each completed loop when gradualIncrease is on. */
+  tempoIncrement: number
+  maxTempo: number
+  countIn: boolean
 }
 
 export type TabCommand =
@@ -44,6 +58,8 @@ export type TabCommand =
   | { type: 'muteTrack'; trackIndex: number; value: boolean }
   | { type: 'soloTrack'; trackIndex: number; value: boolean }
   | { type: 'setTrackVolume'; trackIndex: number; value: number }
+  | { type: 'practiceStart'; config: PracticeConfig }
+  | { type: 'practiceStop' }
 
 export interface TabCommandEnvelope {
   seq: number
