@@ -1,6 +1,7 @@
 'use dom'
 
-import { useEffect, useRef } from 'react'
+import { Component, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import type { ErrorInfo, ReactNode } from 'react'
 import * as alphaTab from '@coderline/alphatab'
 import { useAlphaTab } from '@gtr/shared/web'
 import type { ScoreSummary, TabCommandEnvelope } from '@gtr/shared'
@@ -20,6 +21,16 @@ interface Props {
   dom?: import('expo/dom').DOMProps
 }
 
+// In dev, public/ is served at the dev-server root while this page lives at a deep
+// /_expo/@dom URL, so public assets need root-absolute paths. In release builds the
+// page is a file:// URL inside the app's www.bundle and public/ is copied right next
+// to it, so assets must resolve relative to the document — root-absolute paths would
+// point at the filesystem root (file:///font/...), which WKWebView's sandbox blocks.
+const PUBLIC_BASE =
+  typeof window !== 'undefined' && window.location.protocol === 'file:'
+    ? new URL('./', window.location.href).href
+    : '/'
+
 // Metro has no alphaTab bundler plugin, so alphaTab's synth-worker URL attempts all
 // point into the bundle URL space (or blob wrappers around it) and 404 silently.
 // Redirect every alphaTab worker request to the copies served from public/vendor/
@@ -31,7 +42,7 @@ if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
     constructor(url: string | URL, opts?: WorkerOptions) {
       const s = String(url)
       if (s.includes('alphaTab.worker') || s.startsWith('blob:')) {
-        super(new URL('/vendor/alphaTab.worker.mjs', window.location.href), { type: 'module' })
+        super(new URL('vendor/alphaTab.worker.mjs', PUBLIC_BASE), { type: 'module' })
       } else {
         super(url, opts)
       }
@@ -39,12 +50,142 @@ if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
   }
 }
 
+// console.warn is invisible in TestFlight builds, so runtime errors are kept in a
+// module-level store and surfaced as an in-page overlay. Module scope (rather than a
+// mount effect) so errors thrown before React mounts are not lost.
+const runtimeErrors: string[] = []
+const runtimeErrorListeners = new Set<() => void>()
+
+function pushRuntimeError(message: string) {
+  runtimeErrors.push(message)
+  runtimeErrorListeners.forEach((l) => l())
+}
+
+function subscribeRuntimeErrors(listener: () => void) {
+  runtimeErrorListeners.add(listener)
+  return () => {
+    runtimeErrorListeners.delete(listener)
+  }
+}
+
 if (typeof window !== 'undefined') {
-  window.addEventListener('error', (e) =>
+  window.addEventListener('error', (e) => {
     console.warn('[tab-view] window error:', e.message, e.filename, e.lineno)
-  )
-  window.addEventListener('unhandledrejection', (e) =>
+    const where = e.filename ? ` (${e.filename}:${e.lineno})` : ''
+    pushRuntimeError(`${e.message}${where}`)
+  })
+  window.addEventListener('unhandledrejection', (e) => {
     console.warn('[tab-view] unhandled rejection:', String(e.reason))
+    const reason = e.reason as Error | undefined
+    pushRuntimeError(`Unhandled rejection: ${String(reason?.message ?? e.reason)}`)
+  })
+}
+
+interface ErrorBoundaryProps {
+  theme: 'light' | 'dark'
+  topInset: number
+  children: ReactNode
+}
+
+class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  { error: Error | null; componentStack: string | null }
+> {
+  state = { error: null as Error | null, componentStack: null as string | null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn('[tab-view] render error:', error, info.componentStack)
+    this.setState({ componentStack: info.componentStack ?? null })
+  }
+
+  render() {
+    const { error, componentStack } = this.state
+    if (!error) return this.props.children
+    const dark = this.props.theme === 'dark'
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          boxSizing: 'border-box',
+          padding: 16,
+          paddingTop: this.props.topInset + 16,
+          overflowY: 'auto',
+          background: dark ? '#1a1b26' : '#ffffff',
+          color: dark ? '#f7768e' : '#c0392b',
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          fontSize: 13,
+          lineHeight: 1.45,
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'anywhere',
+          userSelect: 'text'
+        }}>
+        <strong>Tab view crashed</strong>
+        {`\n\n${String(error.message ?? error)}`}
+        {error.stack ? `\n\n${error.stack}` : ''}
+        {componentStack ? `\n\nComponent stack:${componentStack}` : ''}
+      </div>
+    )
+  }
+}
+
+function RuntimeErrorOverlay({ theme }: { theme: 'light' | 'dark' }) {
+  const errorCount = useSyncExternalStore(
+    subscribeRuntimeErrors,
+    () => runtimeErrors.length,
+    () => 0
+  )
+  const [dismissedCount, setDismissedCount] = useState(0)
+  if (errorCount <= dismissedCount) return null
+  const dark = theme === 'dark'
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: 12,
+        right: 12,
+        bottom: 12,
+        zIndex: 10,
+        boxSizing: 'border-box',
+        maxHeight: '40vh',
+        overflowY: 'auto',
+        padding: 12,
+        borderRadius: 12,
+        background: dark ? 'rgba(60, 18, 28, 0.95)' : 'rgba(255, 235, 238, 0.97)',
+        border: `1px solid ${dark ? '#f7768e' : '#c0392b'}`,
+        color: dark ? '#f7768e' : '#c0392b',
+        fontFamily: 'ui-monospace, Menlo, monospace',
+        fontSize: 12,
+        lineHeight: 1.45,
+        whiteSpace: 'pre-wrap',
+        overflowWrap: 'anywhere',
+        userSelect: 'text'
+      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+        <strong style={{ fontFamily: 'system-ui, sans-serif' }}>
+          {errorCount - dismissedCount === 1
+            ? 'Error'
+            : `${errorCount - dismissedCount} errors`}
+        </strong>
+        <button
+          onClick={() => setDismissedCount(errorCount)}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: 'inherit',
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: 12,
+            fontWeight: 600,
+            padding: 0
+          }}>
+          Dismiss
+        </button>
+      </div>
+      {runtimeErrors.slice(dismissedCount).join('\n\n')}
+    </div>
   )
 }
 
@@ -55,7 +196,7 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes
 }
 
-export default function TabView({
+function TabViewInner({
   fileBase64,
   texBase64,
   theme,
@@ -70,9 +211,8 @@ export default function TabView({
   const lastSeq = useRef(0)
 
   const [state, actions] = useAlphaTab(containerRef, viewportRef, theme, {
-    // Absolute paths: the DOM component page lives at a deep URL, but public/ is served at the site root.
-    fontDirectory: '/font/',
-    soundFontUrl: '/soundfont/sonivox.sf2',
+    fontDirectory: `${PUBLIC_BASE}font/`,
+    soundFontUrl: `${PUBLIC_BASE}soundfont/sonivox.sf2`,
     useWorkers: false,
     // Metro cannot bundle alphaTab's audio worklet; script-processor audio runs on the main thread.
     outputMode: alphaTab.PlayerOutputMode.WebAudioScriptProcessor,
@@ -201,5 +341,14 @@ export default function TabView({
         <div ref={containerRef} />
       </div>
     </div>
+  )
+}
+
+export default function TabView(props: Props) {
+  return (
+    <ErrorBoundary theme={props.theme} topInset={props.topInset ?? 0}>
+      <TabViewInner {...props} />
+      <RuntimeErrorOverlay theme={props.theme} />
+    </ErrorBoundary>
   )
 }
