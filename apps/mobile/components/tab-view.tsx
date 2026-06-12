@@ -20,6 +20,16 @@ interface Props {
   dom?: import('expo/dom').DOMProps
 }
 
+// In dev, public/ is served at the dev-server root while this page lives at a deep
+// /_expo/@dom URL, so public assets need root-absolute paths. In release builds the
+// page is a file:// URL inside the app's www.bundle and public/ is copied right next
+// to it, so assets must resolve relative to the document — root-absolute paths would
+// point at the filesystem root (file:///font/...), which WKWebView's sandbox blocks.
+const PUBLIC_BASE =
+  typeof window !== 'undefined' && window.location.protocol === 'file:'
+    ? new URL('./', window.location.href).href
+    : '/'
+
 // Metro has no alphaTab bundler plugin, so alphaTab's synth-worker URL attempts all
 // point into the bundle URL space (or blob wrappers around it) and 404 silently.
 // Redirect every alphaTab worker request to the copies served from public/vendor/
@@ -31,7 +41,7 @@ if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
     constructor(url: string | URL, opts?: WorkerOptions) {
       const s = String(url)
       if (s.includes('alphaTab.worker') || s.startsWith('blob:')) {
-        super(new URL('/vendor/alphaTab.worker.mjs', window.location.href), { type: 'module' })
+        super(new URL('vendor/alphaTab.worker.mjs', PUBLIC_BASE), { type: 'module' })
       } else {
         super(url, opts)
       }
@@ -70,9 +80,8 @@ export default function TabView({
   const lastSeq = useRef(0)
 
   const [state, actions] = useAlphaTab(containerRef, viewportRef, theme, {
-    // Absolute paths: the DOM component page lives at a deep URL, but public/ is served at the site root.
-    fontDirectory: '/font/',
-    soundFontUrl: '/soundfont/sonivox.sf2',
+    fontDirectory: `${PUBLIC_BASE}font/`,
+    soundFontUrl: `${PUBLIC_BASE}soundfont/sonivox.sf2`,
     useWorkers: false,
     // Metro cannot bundle alphaTab's audio worklet; script-processor audio runs on the main thread.
     outputMode: alphaTab.PlayerOutputMode.WebAudioScriptProcessor,
