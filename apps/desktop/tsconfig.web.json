@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/renderer/src/*"]
+    },
+    "outDir": "./out",
+    "types": ["vite/client"]
+  },
+  "include": [
+    "src/renderer/src/**/*",
+    "src/renderer/*.d.ts",
+    "../../packages/shared/src/**/*"
+  ]
+}

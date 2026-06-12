@@ -22,7 +22,7 @@ jobs:
         run: npm ci
 
       - name: Build app
-        run: npm run build
+        run: npm run build:desktop
 
       - name: Import code signing certificate
         env:
@@ -51,6 +51,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npx electron-builder --mac --arm64 --publish never
+        working-directory: apps/desktop
 
       - name: Cleanup keychain
         if: always()
@@ -64,14 +65,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dmg-arm64
-          path: dist/*.dmg
+          path: apps/desktop/dist/*.dmg
           if-no-files-found: error
 
       - name: Upload ZIP
         uses: actions/upload-artifact@v4
         with:
           name: zip-arm64
-          path: dist/*.zip
+          path: apps/desktop/dist/*.zip
           if-no-files-found: error
 
   release:

@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Guitar Tab Reader",
+    "slug": "guitar-tab-reader",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "scheme": "gtr",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yemirhan.guitartabreader"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar"
+    ]
+  }
+}
