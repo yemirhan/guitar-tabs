@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { File, Paths } from 'expo-file-system'
 import TabView from '@/components/tab-view'
 import TrackSheet from '@/components/track-sheet'
-import type { ScoreSummary, TabCommand, TabCommandEnvelope, TrackSummary } from '@gtr/shared'
+import PracticeSheet from '@/components/practice-sheet'
+import type { PracticeConfig, ScoreSummary, TabCommand, TabCommandEnvelope, TrackSummary } from '@gtr/shared'
 import { PLAYER_STATE_PLAYING, MIN_ZOOM, MAX_ZOOM } from '@gtr/shared'
 
 const SPEED_PRESETS = [0.25, 0.5, 0.75, 0.9, 1, 1.25, 1.5, 2]
@@ -32,6 +33,20 @@ export default function Player() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [volumes, setVolumes] = useState<Record<number, number>>({})
   const [tracksVisible, setTracksVisible] = useState(false)
+  const [practiceVisible, setPracticeVisible] = useState(false)
+  const [barCount, setBarCount] = useState(0)
+  const [practiceLooping, setPracticeLooping] = useState(false)
+  const [loopCount, setLoopCount] = useState(0)
+  const [loopTempo, setLoopTempo] = useState(0.75)
+  const [practiceConfig, setPracticeConfig] = useState<PracticeConfig>({
+    startBar: 1,
+    endBar: 4,
+    loopTempo: 0.75,
+    gradualIncrease: false,
+    tempoIncrement: 0.05,
+    maxTempo: 1,
+    countIn: true
+  })
 
   const fileBase64 = useMemo(() => {
     if (!file) return null
@@ -45,7 +60,21 @@ export default function Player() {
   const onScoreLoaded = async (summary: ScoreSummary) => {
     setTitle(summary.title || file || 'Untitled')
     setTracks(summary.tracks)
+    setBarCount(summary.barCount ?? 0)
     setIsLoaded(true)
+  }
+
+  const startPractice = () => {
+    setPracticeLooping(true)
+    setLoopCount(0)
+    setLoopTempo(practiceConfig.loopTempo)
+    send({ type: 'practiceStart', config: practiceConfig })
+  }
+
+  const stopPractice = () => {
+    setPracticeLooping(false)
+    setLoopCount(0)
+    send({ type: 'practiceStop' })
   }
 
   const changeSpeed = (s: number) => {
@@ -94,6 +123,13 @@ export default function Player() {
         </Stack.Toolbar.Menu>
         <Stack.Toolbar.Spacer />
         <Stack.Toolbar.Button
+          icon="repeat"
+          accessibilityLabel="Practice mode"
+          selected={practiceLooping || practiceVisible}
+          onPress={() => setPracticeVisible((v) => !v)}
+        />
+        <Stack.Toolbar.Spacer />
+        <Stack.Toolbar.Button
           icon="minus.magnifyingglass"
           accessibilityLabel="Zoom out"
           onPress={() => changeZoom(zoom - 0.1)}
@@ -127,6 +163,10 @@ export default function Player() {
             command={command}
             onScoreLoaded={onScoreLoaded}
             onPlayerStateChanged={async (st) => setIsPlaying(st === PLAYER_STATE_PLAYING)}
+            onPracticeLoop={async (count, tempo) => {
+              setLoopCount(count)
+              setLoopTempo(tempo)
+            }}
             onError={async (msg) => {
               Alert.alert('Could not load tab', msg, [
                 { text: 'OK', onPress: () => router.back() }
@@ -161,6 +201,18 @@ export default function Player() {
             setVolumes((prev) => ({ ...prev, [i]: v }))
             send({ type: 'setTrackVolume', trackIndex: i, value: v })
           }}
+        />
+        <PracticeSheet
+          isPresented={practiceVisible}
+          onIsPresentedChange={setPracticeVisible}
+          config={practiceConfig}
+          onConfigChange={setPracticeConfig}
+          barCount={barCount}
+          isLooping={practiceLooping}
+          loopCount={loopCount}
+          currentTempo={loopTempo}
+          onStart={startPractice}
+          onStop={stopPractice}
         />
       </View>
     </View>

@@ -4,7 +4,7 @@ import { Component, useEffect, useRef, useState, useSyncExternalStore } from 're
 import type { ErrorInfo, ReactNode } from 'react'
 import * as alphaTab from '@coderline/alphatab'
 import { useAlphaTab } from '@gtr/shared/web'
-import type { ScoreSummary, TabCommandEnvelope } from '@gtr/shared'
+import type { PracticeConfig, ScoreSummary, TabCommandEnvelope } from '@gtr/shared'
 
 interface Props {
   fileBase64: string | null
@@ -17,6 +17,8 @@ interface Props {
   command: TabCommandEnvelope | null
   onScoreLoaded: (summary: ScoreSummary) => Promise<void>
   onPlayerStateChanged: (playerState: number) => Promise<void>
+  /** Reports each completed practice loop with the (possibly increased) tempo. */
+  onPracticeLoop?: (loopCount: number, tempo: number) => Promise<void>
   onError: (message: string) => Promise<void>
   dom?: import('expo/dom').DOMProps
 }
@@ -204,11 +206,16 @@ function TabViewInner({
   command,
   onScoreLoaded,
   onPlayerStateChanged,
+  onPracticeLoop,
   onError
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
   const lastSeq = useRef(0)
+  // Practice loop state lives in a ref: playerFinished fires from alphaTab and
+  // must see current values without re-subscribing.
+  const practiceRef = useRef<{ config: PracticeConfig; tempo: number; loops: number } | null>(null)
+  const savedTempoRef = useRef(1)
 
   const [state, actions] = useAlphaTab(containerRef, viewportRef, theme, {
     fontDirectory: `${PUBLIC_BASE}font/`,
@@ -242,11 +249,33 @@ function TabViewInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.api])
 
+  // Practice mode: gradual tempo increase on each completed loop.
+  useEffect(() => {
+    const api = state.api
+    if (!api) return
+    const onPlayerFinished = () => {
+      const practice = practiceRef.current
+      if (!practice) return
+      practice.loops += 1
+      if (practice.config.gradualIncrease) {
+        practice.tempo = Math.min(practice.tempo + practice.config.tempoIncrement, practice.config.maxTempo)
+        actions.setTempo(practice.tempo)
+      }
+      onPracticeLoop?.(practice.loops, practice.tempo)
+    }
+    api.playerFinished.on(onPlayerFinished)
+    return () => {
+      api.playerFinished.off(onPlayerFinished)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.api])
+
   useEffect(() => {
     if (!state.score) return
     onScoreLoaded({
       title: state.score.title,
       artist: state.score.artist,
+      barCount: state.score.masterBars.length,
       tracks: state.tracks.map((t) => ({
         index: t.index,
         name: t.name,
@@ -261,6 +290,39 @@ function TabViewInner({
     onPlayerStateChanged(state.playerState as number)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.playerState])
+
+  const startPractice = (config: PracticeConfig) => {
+    const api = actions.getApi()
+    const score = api?.score
+    if (!score) return
+    const totalBars = score.masterBars.length
+    const startIdx = Math.min(Math.max(0, config.startBar - 1), totalBars - 1)
+    const endIdx = Math.min(Math.max(startIdx, config.endBar - 1), totalBars - 1)
+    const startTick = score.masterBars[startIdx].start
+    const endMasterBar = score.masterBars[endIdx]
+    const endTick = endMasterBar.start + endMasterBar.calculateDuration()
+
+    if (!practiceRef.current) savedTempoRef.current = state.tempo
+    practiceRef.current = { config, tempo: config.loopTempo, loops: 0 }
+
+    actions.stop()
+    actions.setPlaybackRange({ startTick, endTick })
+    actions.setLooping(true)
+    actions.setTempo(config.loopTempo)
+    actions.setCountIn(config.countIn ? 1 : 0)
+    // Small delay to let alphaTab process the range before playing
+    setTimeout(() => actions.playPause(), 50)
+  }
+
+  const stopPractice = () => {
+    if (!practiceRef.current) return
+    practiceRef.current = null
+    actions.stop()
+    actions.setPlaybackRange(null)
+    actions.setLooping(false)
+    actions.setTempo(savedTempoRef.current)
+    actions.setCountIn(0)
+  }
 
   useEffect(() => {
     if (!command || command.seq === lastSeq.current) return
@@ -301,28 +363,34 @@ function TabViewInner({
         if (t && api) api.changeTrackVolume([t], cmd.value)
         break
       }
+      case 'practiceStart':
+        startPractice(cmd.config)
+        break
+      case 'practiceStop':
+        stopPractice()
+        break
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [command])
 
   const accent = theme === 'dark' ? '#0a84ff' : '#007aff'
+  const dark = theme === 'dark'
 
   return (
     <div
-      ref={viewportRef}
       style={{
         // #root is a flex container; without explicit sizing this div collapses to width 0.
         flex: 1,
         width: '100%',
         height: '100vh',
-        overflowY: 'auto',
-        background: theme === 'dark' ? '#1a1b26' : '#ffffff'
+        position: 'relative',
+        background: dark ? '#1a1b26' : '#ffffff'
       }}
     >
       {/* alphaTab injects cursor/selection elements but leaves them unstyled. */}
       <style>{`
         .at-cursor-bar {
-          background: ${theme === 'dark' ? 'rgba(255, 184, 108, 0.22)' : 'rgba(255, 159, 10, 0.18)'};
+          background: ${dark ? 'rgba(255, 184, 108, 0.22)' : 'rgba(255, 159, 10, 0.18)'};
         }
         .at-cursor-beat {
           background: ${accent}c0;
@@ -336,9 +404,17 @@ function TabViewInner({
           stroke: ${accent};
         }
       `}</style>
-      {/* Inside the scroller so notation slides under the transparent header. */}
-      <div style={{ paddingTop: topInset }}>
-        <div ref={containerRef} />
+      <div
+        ref={viewportRef}
+        style={{
+          height: '100%',
+          overflowY: 'auto'
+        }}
+      >
+        {/* Inside the scroller so notation slides under the transparent header. */}
+        <div style={{ paddingTop: topInset }}>
+          <div ref={containerRef} />
+        </div>
       </div>
     </div>
   )
