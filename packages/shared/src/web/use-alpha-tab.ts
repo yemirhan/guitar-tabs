@@ -10,8 +10,13 @@ export interface UseAlphaTabOptions {
   fontDirectory?: string | null
   /** Alternative to fontDirectory: explicit font URLs per format (use when asset URLs are hash-renamed). */
   smuflFontSources?: Map<alphaTab.FontFileFormat, string> | null
+  /** Explicit alphaTab worker script URL. Use when bundlers cannot auto-detect alphaTab's script URL. */
+  scriptFile?: string | null
   /** URL of the .sf2 soundfont. */
   soundFontUrl: string
+  /** Raw soundfont bytes. When provided, loaded via api.loadSoundFont() instead of fetching
+   *  soundFontUrl — required where the webview can't fetch the URL (file:// release builds). */
+  soundFontBytes?: Uint8Array | null
   /** Set false in environments where alphaTab's web workers can't be bundled (Expo DOM components). Default true. */
   useWorkers?: boolean
   /** Audio output mode. Use WebAudioScriptProcessor where the audio worklet can't be bundled (Expo DOM components). */
@@ -20,6 +25,8 @@ export interface UseAlphaTabOptions {
   scrollOffsetY?: number
   /** Receives export payloads (desktop wires this to the Electron save dialog). */
   onExportFile?: (data: Uint8Array, defaultName: string, filters: ExportFilter[]) => Promise<boolean>
+  /** Receives alphaTab runtime errors (load/parse/render/player failures). */
+  onError?: (error: unknown) => void
 }
 
 export interface AlphaTabState {
@@ -114,6 +121,7 @@ export function useAlphaTab(
     const opts = optionsRef.current
     const settings = new alphaTab.Settings()
     settings.core.fontDirectory = opts.fontDirectory ?? null
+    settings.core.scriptFile = opts.scriptFile ?? null
     if (opts.smuflFontSources) {
       settings.core.smuflFontSources = opts.smuflFontSources
     }
@@ -123,7 +131,11 @@ export function useAlphaTab(
     if (opts.outputMode !== undefined) {
       settings.player.outputMode = opts.outputMode
     }
-    settings.player.soundFont = opts.soundFontUrl
+    // With explicit bytes, don't set a soundFont URL — alphaTab would try to fetch it (and
+    // fail under file://). The bytes are loaded via api.loadSoundFont() right after construction.
+    if (!opts.soundFontBytes) {
+      settings.player.soundFont = opts.soundFontUrl
+    }
     settings.player.scrollElement = viewport
     settings.player.scrollOffsetY = opts.scrollOffsetY ?? -30
     settings.display.layoutMode = alphaTab.LayoutMode.Page
@@ -139,6 +151,11 @@ export function useAlphaTab(
 
     const api = new alphaTab.AlphaTabApi(container, settings)
     apiRef.current = api
+
+    // Load soundfont from explicit bytes when a URL fetch isn't possible (file:// builds).
+    if (opts.soundFontBytes) {
+      api.loadSoundFont(opts.soundFontBytes, false)
+    }
 
     api.scoreLoaded.on((s) => {
       setScore(s)
@@ -162,6 +179,12 @@ export function useAlphaTab(
 
     api.playerReady.on(() => {
       setIsPlayerReady(true)
+    })
+
+    // Attach the error listener here, on the live api instance, so failures during the
+    // very first load() (which fire before any state-driven re-render) are not swallowed.
+    api.error.on((e) => {
+      optionsRef.current.onError?.(e)
     })
 
     return () => {

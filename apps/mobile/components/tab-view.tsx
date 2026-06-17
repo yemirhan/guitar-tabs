@@ -1,6 +1,6 @@
 'use dom'
 
-import { Component, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { Component, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import * as alphaTab from '@coderline/alphatab'
 import { useAlphaTab } from '@gtr/shared/web'
@@ -11,6 +11,14 @@ interface Props {
   /** Base64-encoded alphaTex. Raw tex must not ride initial props: react-native-webview
    *  inlines them into a JS template literal, which mangles backslashes and quotes. */
   texBase64: string | null
+  /** Base64 of alphaTab.min.js (UMD), read natively. In file:// release builds the webview
+   *  can't fetch the worker script and a blob module worker can't import the core, so the
+   *  synth worker is run as a CLASSIC blob worker of this self-contained UMD (it auto-inits in
+   *  a worker context). Null in dev (the .mjs worker is loaded by URL instead). */
+  workerUmdBase64: string | null
+  /** Base64 of the .sf2 soundfont, read natively. Fed to alphaTab via loadSoundFont() because
+   *  the webview can't XHR it from file://. Null in dev (loaded by URL instead). */
+  soundFontBase64: string | null
   theme: 'light' | 'dark'
   /** Space reserved for a transparent native header; content scrolls under it. */
   topInset?: number
@@ -32,19 +40,37 @@ const PUBLIC_BASE =
   typeof window !== 'undefined' && window.location.protocol === 'file:'
     ? new URL('./', window.location.href).href
     : '/'
+const PUBLIC_BASE_URL =
+  typeof window !== 'undefined' ? new URL(PUBLIC_BASE, window.location.href).href : PUBLIC_BASE
+const ALPHATAB_WORKER_URL =
+  typeof window !== 'undefined'
+    ? new URL('vendor/alphaTab.worker.mjs', PUBLIC_BASE_URL).href
+    : 'vendor/alphaTab.worker.mjs'
+// In a file:// release build WKWebView blocks BOTH `new Worker('file://…')` (null origin →
+// SecurityError) and fetch/XHR of file:// resources, and a blob worker in a null-origin
+// document can't import/importScripts anything cross-origin. So the synth worker can be
+// neither the vendored .mjs (a file:// URL) nor a blob *module* worker that imports the core.
+// Instead the player reads the self-contained UMD build's bytes natively and we run them as a
+// CLASSIC blob worker, which WKWebView allows and which self-initializes in a worker context
+// with no further loads (see buildClassicWorkerFromUmd / the workerUmdBase64 prop). Over http
+// (dev) none of this applies and the vendored .mjs worker is used by URL.
+//
+// alphaTab is the only worker creator in this webview; the override below redirects its worker
+// requests to whatever `resolvedWorkerUrl` we prepared.
+let resolvedWorkerUrl: string = ALPHATAB_WORKER_URL
+let resolvedWorkerIsModule = true
 
-// Metro has no alphaTab bundler plugin, so alphaTab's synth-worker URL attempts all
-// point into the bundle URL space (or blob wrappers around it) and 404 silently.
-// Redirect every alphaTab worker request to the copies served from public/vendor/
-// (alphaTab.worker.mjs imports ./alphaTab.core.mjs from the same directory).
-// alphaTab is the only worker creator in this webview.
+function buildClassicWorkerFromUmd(umdBytes: Uint8Array): string {
+  return URL.createObjectURL(new Blob([umdBytes as BlobPart], { type: 'text/javascript' }))
+}
+
 if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
   const NativeWorker = Worker
   ;(window as any).Worker = class extends NativeWorker {
     constructor(url: string | URL, opts?: WorkerOptions) {
       const s = String(url)
       if (s.includes('alphaTab.worker') || s.startsWith('blob:')) {
-        super(new URL('vendor/alphaTab.worker.mjs', PUBLIC_BASE), { type: 'module' })
+        super(resolvedWorkerUrl, resolvedWorkerIsModule ? { type: 'module' } : undefined)
       } else {
         super(url, opts)
       }
@@ -201,6 +227,7 @@ function base64ToBytes(b64: string): Uint8Array {
 function TabViewInner({
   fileBase64,
   texBase64,
+  soundFontBase64,
   theme,
   topInset = 0,
   command,
@@ -217,13 +244,22 @@ function TabViewInner({
   const practiceRef = useRef<{ config: PracticeConfig; tempo: number; loops: number } | null>(null)
   const savedTempoRef = useRef(1)
 
+  // Natively-read soundfont bytes (file:// release builds can't XHR the .sf2). Decoded once.
+  const soundFontBytes = useMemo(
+    () => (soundFontBase64 ? base64ToBytes(soundFontBase64) : null),
+    [soundFontBase64]
+  )
+
   const [state, actions] = useAlphaTab(containerRef, viewportRef, theme, {
     fontDirectory: `${PUBLIC_BASE}font/`,
+    scriptFile: ALPHATAB_WORKER_URL,
     soundFontUrl: `${PUBLIC_BASE}soundfont/sonivox.sf2`,
+    soundFontBytes,
     useWorkers: false,
     // Metro cannot bundle alphaTab's audio worklet; script-processor audio runs on the main thread.
     outputMode: alphaTab.PlayerOutputMode.WebAudioScriptProcessor,
-    scrollOffsetY: -(topInset + 30)
+    scrollOffsetY: -(topInset + 30),
+    onError: (e) => onError(String((e as Error)?.message ?? e))
   })
 
   useEffect(() => {
@@ -235,19 +271,6 @@ function TabViewInner({
     // actions identity is stable enough for load-on-change; deliberately not a dep
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileBase64, texBase64, state.api])
-
-  useEffect(() => {
-    const api = state.api
-    if (!api) return
-    const handler = (e: unknown) => {
-      onError(String((e as Error)?.message ?? e))
-    }
-    api.error.on(handler)
-    return () => {
-      api.error.off(handler)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.api])
 
   // Practice mode: gradual tempo increase on each completed loop.
   useEffect(() => {
@@ -420,7 +443,19 @@ function TabViewInner({
   )
 }
 
+let workerBuiltFromUmd = false
+
 export default function TabView(props: Props) {
+  // Build the classic UMD synth worker from the native bytes during render, before
+  // TabViewInner's effects construct the AlphaTabApi (which spawns the worker). useMemo runs
+  // synchronously in render, so resolvedWorkerUrl is set in time.
+  useMemo(() => {
+    if (workerBuiltFromUmd || !props.workerUmdBase64) return
+    resolvedWorkerUrl = buildClassicWorkerFromUmd(base64ToBytes(props.workerUmdBase64))
+    resolvedWorkerIsModule = false
+    workerBuiltFromUmd = true
+  }, [props.workerUmdBase64])
+
   return (
     <ErrorBoundary theme={props.theme} topInset={props.topInset ?? 0}>
       <TabViewInner {...props} />

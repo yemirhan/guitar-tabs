@@ -57,6 +57,22 @@ export default function Player() {
     }
   }, [file])
 
+  // In release the DOM page is a file:// document and WKWebView blocks fetch/XHR of file://
+  // resources. A blob worker also can't import (or importScripts) the core cross-origin from
+  // a null-origin document. So read the self-contained UMD build (which auto-initializes in a
+  // worker with no imports) + the soundfont natively from the app bundle and hand them to the
+  // webview as bytes. In dev/web these reads fail (assets are served over http) and we pass
+  // null, so the webview keeps loading them by URL as before.
+  const domAssets = useMemo(() => {
+    try {
+      const workerUmd = new File(Paths.bundle, 'www.bundle', 'vendor', 'alphaTab.min.js').base64Sync()
+      const soundFont = new File(Paths.bundle, 'www.bundle', 'soundfont', 'sonivox.sf2').base64Sync()
+      return { workerUmd, soundFont }
+    } catch {
+      return null
+    }
+  }, [])
+
   const onScoreLoaded = async (summary: ScoreSummary) => {
     setTitle(summary.title || file || 'Untitled')
     setTracks(summary.tracks)
@@ -158,6 +174,8 @@ export default function Player() {
           <TabView
             fileBase64={fileBase64}
             texBase64={null}
+            workerUmdBase64={domAssets?.workerUmd ?? null}
+            soundFontBase64={domAssets?.soundFont ?? null}
             theme={theme}
             topInset={topInset}
             command={command}
