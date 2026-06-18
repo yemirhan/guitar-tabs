@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import {
   FlatList,
   Pressable,
+  StyleSheet,
   Text,
   View,
   Alert,
@@ -9,7 +10,15 @@ import {
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
-import { Host, Button, Image, ContentUnavailableView } from "@expo/ui/swift-ui";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  Host,
+  Button,
+  Image,
+  ContentUnavailableView,
+  RNHostView,
+  SwipeActions,
+} from "@expo/ui/swift-ui";
 import { buttonStyle, controlSize } from "@expo/ui/swift-ui/modifiers";
 import { loadLibrary, importScore, removeScore } from "@/lib/library";
 import type { ProjectEntry } from "@gtr/shared";
@@ -25,6 +34,7 @@ function fileBadge(fileName: string): string {
 
 export default function Library() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [entries, setEntries] = useState<ProjectEntry[]>([]);
 
   useFocusEffect(
@@ -58,23 +68,10 @@ export default function Library() {
     ]);
   };
 
-  return (
-    <>
-      <FlatList
-        data={entries}
-        keyExtractor={(e) => e.fileName}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 16, gap: 10, flexGrow: 1 }}
-        ListEmptyComponent={
-          <Host style={{ flex: 1 }}>
-            <ContentUnavailableView
-              title="No Tabs Yet"
-              systemImage="guitars"
-              description="Import a Guitar Pro file to get started."
-            />
-          </Host>
-        }
-        renderItem={({ item }) => (
+  const renderItem = ({ item }: { item: ProjectEntry }) => (
+    <Host matchContents={{ vertical: true }} style={styles.rowHost}>
+      <SwipeActions>
+        <RNHostView matchContents>
           <Pressable
             onPress={() =>
               router.push({
@@ -83,29 +80,16 @@ export default function Library() {
               })
             }
             onLongPress={() => confirmRemove(item)}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 14,
-              padding: 14,
-              borderRadius: 16,
-              borderCurve: "continuous",
-              backgroundColor: pressed
-                ? PlatformColor("tertiarySystemGroupedBackground")
-                : PlatformColor("secondarySystemGroupedBackground"),
-            })}
+            style={({ pressed }) => [
+              styles.row,
+              {
+                backgroundColor: pressed
+                  ? PlatformColor("tertiarySystemGroupedBackground")
+                  : PlatformColor("secondarySystemGroupedBackground"),
+              },
+            ]}
           >
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                borderCurve: "continuous",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(10,132,255,0.12)",
-              }}
-            >
+            <View style={styles.iconTile}>
               <Host matchContents>
                 <Image
                   systemName="music.note"
@@ -114,7 +98,7 @@ export default function Library() {
                 />
               </Host>
             </View>
-            <View style={{ flex: 1, gap: 3 }}>
+            <View style={styles.titleGroup}>
               <Text
                 numberOfLines={1}
                 style={{
@@ -140,14 +124,51 @@ export default function Library() {
               />
             </Host>
           </Pressable>
-        )}
+        </RNHostView>
+        <SwipeActions.Actions edge="trailing">
+          <Button
+            label="Delete"
+            systemImage="trash"
+            role="destructive"
+            onPress={() => confirmRemove(item)}
+          />
+        </SwipeActions.Actions>
+      </SwipeActions>
+    </Host>
+  );
+
+  return (
+    <View style={styles.screen}>
+      <FlatList
+        style={styles.list}
+        data={entries}
+        keyExtractor={(e) => e.fileName}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        automaticallyAdjustKeyboardInsets={false}
+        alwaysBounceVertical={false}
+        scrollEnabled={entries.length > 0}
+        scrollIndicatorInsets={{ bottom: 8 }}
+        contentContainerStyle={[
+          styles.listContent,
+          entries.length === 0 && styles.emptyContent,
+        ]}
+        ListEmptyComponent={
+          <Host style={{ flex: 1 }}>
+            <ContentUnavailableView
+              title="No Tabs Yet"
+              systemImage="guitars"
+              description="Import a Guitar Pro file to get started."
+            />
+          </Host>
+        }
+        renderItem={renderItem}
       />
       <View
-        style={{
-          alignItems: "center",
-          paddingHorizontal: 16,
-          paddingBottom: 24,
-        }}
+        style={[
+          styles.importBar,
+          { paddingBottom: Math.max(insets.bottom, 16) },
+        ]}
       >
         <Host matchContents>
           <Button
@@ -158,6 +179,56 @@ export default function Library() {
           />
         </Host>
       </View>
-    </>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 10,
+  },
+  emptyContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  rowHost: {
+    width: "100%",
+  },
+  row: {
+    width: "100%",
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 14,
+    borderRadius: 16,
+    borderCurve: "continuous",
+  },
+  iconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderCurve: "continuous",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(10,132,255,0.12)",
+  },
+  titleGroup: {
+    flex: 1,
+    gap: 3,
+  },
+  importBar: {
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+});
