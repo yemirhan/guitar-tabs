@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yemirhan.guitartabreader"
+      "bundleIdentifier": "com.yemirhan.guitartabreader",
+      "appleTeamId": "8RD344SHFZ",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
