@@ -7,6 +7,7 @@ import {
   View,
   Alert,
   PlatformColor,
+  RefreshControl,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
@@ -24,6 +25,7 @@ import {
 import { buttonStyle, controlSize } from "@expo/ui/swift-ui/modifiers";
 import { loadLibrary, importScore, removeScore } from "@/lib/library";
 import type { ProjectEntry } from "@gtr/shared";
+import { useGetTabs } from "@/queries/tabs";
 
 function displayName(fileName: string): string {
   return fileName.replace(/\.[^.]+$/, "");
@@ -39,11 +41,7 @@ export default function Library() {
   const insets = useSafeAreaInsets();
   const [entries, setEntries] = useState<ProjectEntry[]>([]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setEntries(loadLibrary());
-    }, []),
-  );
+  const { data, isLoading, error, refetch } = useGetTabs();
 
   const pickFile = async () => {
     const res = await DocumentPicker.getDocumentAsync({
@@ -70,21 +68,21 @@ export default function Library() {
     ]);
   };
 
-
-
   const importBarBottomInset = Math.max(insets.bottom, 16);
 
   return (
     <View style={styles.screen}>
-
       <FlatList
         style={styles.list}
-        data={entries}
+        data={data}
         keyExtractor={(e) => e.fileName}
-        contentInsetAdjustmentBehavior="always"
+        contentInsetAdjustmentBehavior="automatic"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustKeyboardInsets={false}
         alwaysBounceVertical={false}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+        }
         scrollEnabled={entries.length > 0}
         scrollIndicatorInsets={{ bottom: importBarBottomInset + 72 }}
         contentContainerStyle={[
@@ -101,7 +99,9 @@ export default function Library() {
             />
           </Host>
         }
-        renderItem={({ item, index }) => <Item confirmRemove={confirmRemove} key={index} item={item} />}
+        renderItem={({ item, index }) => (
+          <Item confirmRemove={confirmRemove} key={index} item={item} />
+        )}
       />
       <AddNewTab pickFile={pickFile} />
     </View>
@@ -112,10 +112,7 @@ const AddNewTab = ({ pickFile }: { pickFile: () => void }) => {
   const insets = useSafeAreaInsets();
   return (
     <View
-      style={[
-        styles.importBar,
-        { paddingBottom: Math.max(insets.bottom, 16) },
-      ]}
+      style={[styles.importBar, { paddingBottom: Math.max(insets.bottom, 16) }]}
     >
       <Host matchContents>
         <Button
@@ -126,11 +123,17 @@ const AddNewTab = ({ pickFile }: { pickFile: () => void }) => {
         />
       </Host>
     </View>
-  )
-}
+  );
+};
 
-const Item = ({ item, confirmRemove }: { item: ProjectEntry, confirmRemove: (item: ProjectEntry) => void }) => {
-  const router = useRouter()
+const Item = ({
+  item,
+  confirmRemove,
+}: {
+  item: ProjectEntry;
+  confirmRemove: (item: ProjectEntry) => void;
+}) => {
+  const router = useRouter();
   return (
     <Host matchContents={{ vertical: true }} style={styles.rowHost}>
       <SwipeActions>
@@ -198,8 +201,8 @@ const Item = ({ item, confirmRemove }: { item: ProjectEntry, confirmRemove: (ite
         </SwipeActions.Actions>
       </SwipeActions>
     </Host>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   screen: {

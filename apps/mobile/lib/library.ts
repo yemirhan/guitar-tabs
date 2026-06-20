@@ -4,10 +4,11 @@ import type { ProjectEntry } from '@gtr/shared'
 const scoresDir = new Directory(Paths.document, 'scores')
 const indexFile = new File(Paths.document, 'library.json')
 
-export function loadLibrary(): ProjectEntry[] {
+export async function loadLibrary(): Promise<ProjectEntry[]> {
   try {
     if (!indexFile.exists) return []
-    const parsed = JSON.parse(indexFile.textSync())
+    const text = await indexFile.text()
+    const parsed = JSON.parse(text)
     return Array.isArray(parsed) ? (parsed as ProjectEntry[]) : []
   } catch {
     return []
