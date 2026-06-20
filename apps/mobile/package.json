@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo/ui": "~56.0.16",
     "@gtr/shared": "*",
+    "@tanstack/react-query": "^5.101.0",
     "expo": "~56.0.9",
     "expo-constants": "~56.0.17",
     "expo-dev-client": "~56.0.19",

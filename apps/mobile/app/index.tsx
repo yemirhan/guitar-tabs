@@ -18,6 +18,8 @@ import {
   ContentUnavailableView,
   RNHostView,
   SwipeActions,
+  ScrollView,
+  LazyVStack,
 } from "@expo/ui/swift-ui";
 import { buttonStyle, controlSize } from "@expo/ui/swift-ui/modifiers";
 import { loadLibrary, importScore, removeScore } from "@/lib/library";
@@ -68,7 +70,68 @@ export default function Library() {
     ]);
   };
 
-  const renderItem = ({ item }: { item: ProjectEntry }) => (
+
+
+  const importBarBottomInset = Math.max(insets.bottom, 16);
+
+  return (
+    <View style={styles.screen}>
+
+      <FlatList
+        style={styles.list}
+        data={entries}
+        keyExtractor={(e) => e.fileName}
+        contentInsetAdjustmentBehavior="always"
+        automaticallyAdjustContentInsets={false}
+        automaticallyAdjustKeyboardInsets={false}
+        alwaysBounceVertical={false}
+        scrollEnabled={entries.length > 0}
+        scrollIndicatorInsets={{ bottom: importBarBottomInset + 72 }}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: importBarBottomInset + 84 },
+          entries.length === 0 && styles.emptyContent,
+        ]}
+        ListEmptyComponent={
+          <Host style={{ flex: 1 }}>
+            <ContentUnavailableView
+              title="No Tabs Yet"
+              systemImage="guitars"
+              description="Import a Guitar Pro file to get started."
+            />
+          </Host>
+        }
+        renderItem={({ item, index }) => <Item confirmRemove={confirmRemove} key={index} item={item} />}
+      />
+      <AddNewTab pickFile={pickFile} />
+    </View>
+  );
+}
+
+const AddNewTab = ({ pickFile }: { pickFile: () => void }) => {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={[
+        styles.importBar,
+        { paddingBottom: Math.max(insets.bottom, 16) },
+      ]}
+    >
+      <Host matchContents>
+        <Button
+          systemImage="plus"
+          label="Import Tab"
+          onPress={pickFile}
+          modifiers={[buttonStyle("borderedProminent"), controlSize("large")]}
+        />
+      </Host>
+    </View>
+  )
+}
+
+const Item = ({ item, confirmRemove }: { item: ProjectEntry, confirmRemove: (item: ProjectEntry) => void }) => {
+  const router = useRouter()
+  return (
     <Host matchContents={{ vertical: true }} style={styles.rowHost}>
       <SwipeActions>
         <RNHostView matchContents>
@@ -135,52 +198,7 @@ export default function Library() {
         </SwipeActions.Actions>
       </SwipeActions>
     </Host>
-  );
-
-  return (
-    <View style={styles.screen}>
-      <FlatList
-        style={styles.list}
-        data={entries}
-        keyExtractor={(e) => e.fileName}
-        contentInsetAdjustmentBehavior="never"
-        automaticallyAdjustContentInsets={false}
-        automaticallyAdjustKeyboardInsets={false}
-        alwaysBounceVertical={false}
-        scrollEnabled={entries.length > 0}
-        scrollIndicatorInsets={{ bottom: 8 }}
-        contentContainerStyle={[
-          styles.listContent,
-          entries.length === 0 && styles.emptyContent,
-        ]}
-        ListEmptyComponent={
-          <Host style={{ flex: 1 }}>
-            <ContentUnavailableView
-              title="No Tabs Yet"
-              systemImage="guitars"
-              description="Import a Guitar Pro file to get started."
-            />
-          </Host>
-        }
-        renderItem={renderItem}
-      />
-      <View
-        style={[
-          styles.importBar,
-          { paddingBottom: Math.max(insets.bottom, 16) },
-        ]}
-      >
-        <Host matchContents>
-          <Button
-            systemImage="plus"
-            label="Import Tab"
-            onPress={pickFile}
-            modifiers={[buttonStyle("glassProminent"), controlSize("large")]}
-          />
-        </Host>
-      </View>
-    </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -227,7 +245,12 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   importBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0)",
     paddingHorizontal: 16,
     paddingTop: 8,
   },
