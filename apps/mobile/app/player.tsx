@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, View, Alert, useColorScheme } from 'react-native'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -56,6 +56,13 @@ export default function Player() {
       return null
     }
   }, [file])
+
+  useEffect(() => {
+    if (!file || fileBase64 !== null) return
+    Alert.alert('Could not load tab', `The file "${file}" is no longer available.`, [
+      { text: 'OK', onPress: () => router.back() }
+    ])
+  }, [file, fileBase64, router])
 
   // In release the DOM page is a file:// document and WKWebView blocks fetch/XHR of file://
   // resources. A blob worker also can't import (or importScripts) the core cross-origin from
@@ -171,31 +178,33 @@ export default function Player() {
               <ActivityIndicator size="large" />
             </View>
           )}
-          <TabView
-            fileBase64={fileBase64}
-            texBase64={null}
-            workerUmdBase64={domAssets?.workerUmd ?? null}
-            soundFontBase64={domAssets?.soundFont ?? null}
-            theme={theme}
-            topInset={topInset}
-            command={command}
-            onScoreLoaded={onScoreLoaded}
-            onPlayerStateChanged={async (st) => setIsPlaying(st === PLAYER_STATE_PLAYING)}
-            onPracticeLoop={async (count, tempo) => {
-              setLoopCount(count)
-              setLoopTempo(tempo)
-            }}
-            onError={async (msg) => {
-              Alert.alert('Could not load tab', msg, [
-                { text: 'OK', onPress: () => router.back() }
-              ])
-            }}
-            dom={{
-              style: { flex: 1 },
-              scrollEnabled: false,
-              mediaPlaybackRequiresUserAction: false
-            }}
-          />
+          {fileBase64 !== null && (
+            <TabView
+              fileBase64={fileBase64}
+              texBase64={null}
+              workerUmdBase64={domAssets?.workerUmd ?? null}
+              soundFontBase64={domAssets?.soundFont ?? null}
+              theme={theme}
+              topInset={topInset}
+              command={command}
+              onScoreLoaded={onScoreLoaded}
+              onPlayerStateChanged={async (st) => setIsPlaying(st === PLAYER_STATE_PLAYING)}
+              onPracticeLoop={async (count, tempo) => {
+                setLoopCount(count)
+                setLoopTempo(tempo)
+              }}
+              onError={async (msg) => {
+                Alert.alert('Could not load tab', msg, [
+                  { text: 'OK', onPress: () => router.back() }
+                ])
+              }}
+              dom={{
+                style: { flex: 1 },
+                scrollEnabled: false,
+                mediaPlaybackRequiresUserAction: false
+              }}
+            />
+          )}
         </View>
         <TrackSheet
           isPresented={tracksVisible}

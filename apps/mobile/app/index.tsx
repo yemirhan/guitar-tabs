@@ -1,4 +1,3 @@
-import { useCallback, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -9,7 +8,7 @@ import {
   PlatformColor,
   RefreshControl,
 } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -19,13 +18,12 @@ import {
   ContentUnavailableView,
   RNHostView,
   SwipeActions,
-  ScrollView,
-  LazyVStack,
 } from "@expo/ui/swift-ui";
 import { buttonStyle, controlSize } from "@expo/ui/swift-ui/modifiers";
-import { loadLibrary, importScore, removeScore } from "@/lib/library";
+import { importScore, removeScore } from "@/lib/library";
 import type { ProjectEntry } from "@gtr/shared";
-import { useGetTabs } from "@/queries/tabs";
+import { useGetTabs, tabsQueryKey } from "@/queries/tabs";
+import { useQueryClient } from "@tanstack/react-query";
 
 function displayName(fileName: string): string {
   return fileName.replace(/\.[^.]+$/, "");
@@ -37,11 +35,11 @@ function fileBadge(fileName: string): string {
 }
 
 export default function Library() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [entries, setEntries] = useState<ProjectEntry[]>([]);
+  const queryClient = useQueryClient();
 
-  const { data, isLoading, error, refetch } = useGetTabs();
+  const { data, isLoading, refetch } = useGetTabs();
+  const tabs = data ?? [];
 
   const pickFile = async () => {
     const res = await DocumentPicker.getDocumentAsync({
@@ -51,9 +49,19 @@ export default function Library() {
     if (res.canceled || !res.assets?.length) return;
     const asset = res.assets[0];
     try {
-      setEntries(await importScore(asset.uri, asset.name));
+      const next = await importScore(asset.uri, asset.name);
+      queryClient.setQueryData(tabsQueryKey, next);
     } catch (e) {
       Alert.alert("Import failed", String(e));
+    }
+  };
+
+  const removeEntry = async (entry: ProjectEntry) => {
+    try {
+      const next = await removeScore(entry.fileName);
+      queryClient.setQueryData(tabsQueryKey, next);
+    } catch (e) {
+      Alert.alert("Remove failed", String(e));
     }
   };
 
@@ -63,7 +71,7 @@ export default function Library() {
       {
         text: "Remove",
         style: "destructive",
-        onPress: () => setEntries(removeScore(entry.fileName)),
+        onPress: () => void removeEntry(entry),
       },
     ]);
   };
@@ -74,7 +82,7 @@ export default function Library() {
     <View style={styles.screen}>
       <FlatList
         style={styles.list}
-        data={data}
+        data={tabs}
         keyExtractor={(e) => e.fileName}
         contentInsetAdjustmentBehavior="automatic"
         automaticallyAdjustContentInsets={false}
@@ -83,12 +91,11 @@ export default function Library() {
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refetch} />
         }
-        scrollEnabled={entries.length > 0}
         scrollIndicatorInsets={{ bottom: importBarBottomInset + 72 }}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: importBarBottomInset + 84 },
-          entries.length === 0 && styles.emptyContent,
+          tabs.length === 0 && styles.emptyContent,
         ]}
         ListEmptyComponent={
           <Host style={{ flex: 1 }}>
