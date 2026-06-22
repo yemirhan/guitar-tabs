@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as alphaTab from '@coderline/alphatab'
@@ -10,12 +10,13 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const mobileRoot = path.resolve(scriptDir, '..')
 const fixturesDir = path.join(mobileRoot, 'fixtures', 'scores')
 const settings = new alphaTab.Settings()
+const generatedExtensions = new Set(['.gp', '.gp2', '.gp3', '.gp4', '.gp5', '.gp7', '.gpx'])
 
 const fixtures = [
   {
-    fileName: 'synthetic-open-strings.gp',
-    title: 'Synthetic Open Strings',
-    subTitle: 'Single-track smoke test',
+    fileName: 'Open String Warmup.gp',
+    title: 'Open String Warmup',
+    subTitle: 'Right-hand timing and string crossing',
     tracks: [
       {
         name: 'Clean Guitar',
@@ -25,15 +26,17 @@ const fixtures = [
           [[6, 0], [5, 0], [4, 0], [3, 0]],
           [[2, 0], [1, 0], [2, 1], [3, 2]],
           [[4, 2], [3, 0], [2, 1], [1, 0]],
-          [[6, 3], [5, 2], [4, 0], [3, 0]]
+          [[6, 3], [5, 2], [4, 0], [3, 0]],
+          [[6, 0], [4, 0], [5, 2], [3, 0]],
+          [[2, 3], [1, 0], [2, 1], [3, 2]]
         ]
       }
     ]
   },
   {
-    fileName: 'synthetic-chord-study.gp',
-    title: 'Synthetic Chord Study',
-    subTitle: 'Chord rendering smoke test',
+    fileName: 'Chord Loop Etude.gp',
+    title: 'Chord Loop Etude',
+    subTitle: 'Original open-position rhythm study',
     tracks: [
       {
         name: 'Rhythm Guitar',
@@ -63,15 +66,21 @@ const fixtures = [
             [[5, 0], [4, 2], [3, 2]],
             [[4, 0], [3, 2], [2, 3]],
             [[6, 0], [5, 2], [4, 2]]
+          ],
+          [
+            [[5, 3], [4, 2], [2, 1]],
+            [[4, 0], [3, 2], [2, 3]],
+            [[6, 3], [5, 2], [1, 3]],
+            [[6, 0], [5, 2], [4, 2]]
           ]
         ]
       }
     ]
   },
   {
-    fileName: 'synthetic-two-tracks.gp',
-    title: 'Synthetic Two Tracks',
-    subTitle: 'Track panel smoke test',
+    fileName: 'Lead and Bass Groove.gp',
+    title: 'Lead and Bass Groove',
+    subTitle: 'Two-track original demo',
     tracks: [
       {
         name: 'Lead Guitar',
@@ -81,7 +90,9 @@ const fixtures = [
           [[1, 5], [2, 5], [3, 4], [4, 7]],
           [[1, 7], [2, 8], [3, 7], [4, 9]],
           [[1, 8], [2, 10], [3, 9], [4, 10]],
-          [[1, 12], [2, 10], [3, 9], [4, 7]]
+          [[1, 12], [2, 10], [3, 9], [4, 7]],
+          [[1, 10], [2, 8], [3, 9], [4, 10]],
+          [[1, 7], [2, 5], [3, 7], [4, 7]]
         ]
       },
       {
@@ -93,7 +104,87 @@ const fixtures = [
           [[4, 0], [4, 0], [3, 2], [3, 2]],
           [[4, 3], [4, 3], [3, 5], [3, 5]],
           [[4, 5], [4, 5], [3, 7], [3, 7]],
-          [[4, 0], [3, 2], [2, 2], [1, 0]]
+          [[4, 0], [3, 2], [2, 2], [1, 0]],
+          [[4, 5], [3, 7], [2, 7], [3, 5]],
+          [[4, 3], [3, 5], [4, 0], [3, 2]]
+        ]
+      }
+    ]
+  },
+  {
+    fileName: 'Fingerstyle Sketch.gp',
+    title: 'Fingerstyle Sketch',
+    subTitle: 'Original thumb-and-fingers pattern',
+    tracks: [
+      {
+        name: 'Fingerstyle Guitar',
+        program: 24,
+        channel: 0,
+        bars: [
+          [
+            [[6, 0], [3, 1]],
+            [[4, 2], [2, 0]],
+            [[5, 2], [1, 0]],
+            [[4, 2], [2, 0]]
+          ],
+          [
+            [[5, 3], [2, 1]],
+            [[4, 2], [1, 0]],
+            [[3, 0], [2, 1]],
+            [[4, 2], [1, 3]]
+          ],
+          [
+            [[5, 0], [3, 2]],
+            [[4, 2], [2, 3]],
+            [[3, 2], [1, 0]],
+            [[4, 2], [2, 3]]
+          ],
+          [
+            [[6, 3], [2, 3]],
+            [[5, 2], [1, 3]],
+            [[4, 0], [2, 1]],
+            [[6, 0], [1, 0]]
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    fileName: 'Pentatonic Builder.gp',
+    title: 'Pentatonic Builder',
+    subTitle: 'Original single-note lead exercise',
+    tracks: [
+      {
+        name: 'Lead Guitar',
+        program: 30,
+        channel: 0,
+        bars: [
+          [[6, 5], [6, 8], [5, 5], [5, 7]],
+          [[4, 5], [4, 7], [3, 5], [3, 7]],
+          [[2, 5], [2, 8], [1, 5], [1, 8]],
+          [[1, 8], [1, 5], [2, 8], [2, 5]],
+          [[3, 7], [3, 5], [4, 7], [4, 5]],
+          [[5, 7], [5, 5], [6, 8], [6, 5]]
+        ]
+      }
+    ]
+  },
+  {
+    fileName: 'Clean Arpeggio Study.gp',
+    title: 'Clean Arpeggio Study',
+    subTitle: 'Original chord-tone picking demo',
+    tracks: [
+      {
+        name: 'Clean Guitar',
+        program: 27,
+        channel: 0,
+        bars: [
+          [[5, 3], [4, 2], [3, 0], [2, 1]],
+          [[4, 0], [3, 2], [2, 3], [1, 2]],
+          [[6, 3], [5, 2], [4, 0], [3, 0]],
+          [[5, 0], [4, 2], [3, 2], [2, 0]],
+          [[6, 0], [5, 2], [4, 2], [3, 1]],
+          [[5, 3], [4, 2], [3, 0], [1, 0]]
         ]
       }
     ]
@@ -116,10 +207,10 @@ function buildScore(fixture) {
   const score = new Score()
   score.title = fixture.title
   score.subTitle = fixture.subTitle
-  score.artist = 'GTR Synthetic Fixtures'
-  score.music = 'Generated original test material'
+  score.artist = 'Guitar Tab Reader Demo'
+  score.music = 'Original demo material'
   score.tab = 'apps/mobile/scripts/generate-fixtures.mjs'
-  score.copyright = 'Synthetic fixture; no third-party composition.'
+  score.copyright = 'Original generated demo; no third-party composition.'
 
   const barCount = Math.max(...fixture.tracks.map((track) => track.bars.length))
   for (let i = 0; i < barCount; i++) {
@@ -180,7 +271,17 @@ async function writeFixture(fixture) {
   console.log(`wrote ${fixture.fileName}`)
 }
 
-await mkdir(fixturesDir, { recursive: true })
+async function cleanGeneratedFixtures() {
+  await mkdir(fixturesDir, { recursive: true })
+  const entries = await readdir(fixturesDir, { withFileTypes: true })
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && generatedExtensions.has(path.extname(entry.name).toLowerCase()))
+      .map((entry) => rm(path.join(fixturesDir, entry.name)))
+  )
+}
+
+await cleanGeneratedFixtures()
 for (const fixture of fixtures) {
   await writeFixture(fixture)
 }
