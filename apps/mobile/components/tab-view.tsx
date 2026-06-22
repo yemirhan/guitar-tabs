@@ -376,11 +376,20 @@ function TabViewInner({
         if (t) actions.muteTrack(t, cmd.value)
         break
       }
+      case 'muteAllTracks':
+        actions.muteAllTracks()
+        break
+      case 'unmuteAllTracks':
+        actions.unmuteAllTracks()
+        break
       case 'soloTrack': {
         const t = trackAt(cmd.trackIndex)
         if (t) actions.soloTrack(t, cmd.value)
         break
       }
+      case 'clearSoloTracks':
+        actions.clearSoloTracks()
+        break
       case 'setTrackVolume': {
         const t = trackAt(cmd.trackIndex)
         if (t && api) api.changeTrackVolume([t], cmd.value)

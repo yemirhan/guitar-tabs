@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, View, Alert, useColorScheme } from 'react-native'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -10,6 +10,24 @@ import type { PracticeConfig, ScoreSummary, TabCommand, TabCommandEnvelope, Trac
 import { PLAYER_STATE_PLAYING, MIN_ZOOM, MAX_ZOOM } from '@gtr/shared'
 
 const SPEED_PRESETS = [0.25, 0.5, 0.75, 0.9, 1, 1.25, 1.5, 2]
+
+type DomAssets = {
+  workerUmd: string
+  soundFont: string
+} | null
+
+let domAssetsPromise: Promise<DomAssets> | null = null
+
+function loadBundledDomAssets(): Promise<DomAssets> {
+  domAssetsPromise ??= Promise.all([
+    new File(Paths.bundle, 'www.bundle', 'vendor', 'alphaTab.min.js').base64(),
+    new File(Paths.bundle, 'www.bundle', 'soundfont', 'sonivox.sf2').base64()
+  ])
+    .then(([workerUmd, soundFont]) => ({ workerUmd, soundFont }))
+    .catch(() => null)
+
+  return domAssetsPromise
+}
 
 export default function Player() {
   const { file } = useLocalSearchParams<{ file: string }>()
@@ -48,21 +66,66 @@ export default function Player() {
     countIn: true
   })
 
-  const fileBase64 = useMemo(() => {
-    if (!file) return null
-    try {
-      return new File(Paths.document, 'scores', file).base64Sync()
-    } catch {
-      return null
+  const [fileBase64, setFileBase64] = useState<string | null>(null)
+  const [fileLoadFailed, setFileLoadFailed] = useState(false)
+  const [domAssets, setDomAssets] = useState<DomAssets>(null)
+  const [domAssetsReady, setDomAssetsReady] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    setDomAssetsReady(false)
+    loadBundledDomAssets().then((assets) => {
+      if (!active) return
+      setDomAssets(assets)
+      setDomAssetsReady(true)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    setFileBase64(null)
+    setFileLoadFailed(false)
+    setIsLoaded(false)
+    setIsPlaying(false)
+    setTitle('')
+    setTracks([])
+    setSelectedIndex(0)
+    setVolumes({})
+    setBarCount(0)
+
+    if (!file) {
+      setFileLoadFailed(true)
+      return () => {
+        active = false
+      }
+    }
+
+    new File(Paths.document, 'scores', file)
+      .base64()
+      .then((data) => {
+        if (active) setFileBase64(data)
+      })
+      .catch(() => {
+        if (active) setFileLoadFailed(true)
+      })
+
+    return () => {
+      active = false
     }
   }, [file])
 
   useEffect(() => {
-    if (!file || fileBase64 !== null) return
+    if (!fileLoadFailed) return
     Alert.alert('Could not load tab', `The file "${file}" is no longer available.`, [
       { text: 'OK', onPress: () => router.back() }
     ])
-  }, [file, fileBase64, router])
+  }, [file, fileLoadFailed, router])
 
   // In release the DOM page is a file:// document and WKWebView blocks fetch/XHR of file://
   // resources. A blob worker also can't import (or importScripts) the core cross-origin from
@@ -70,16 +133,6 @@ export default function Player() {
   // worker with no imports) + the soundfont natively from the app bundle and hand them to the
   // webview as bytes. In dev/web these reads fail (assets are served over http) and we pass
   // null, so the webview keeps loading them by URL as before.
-  const domAssets = useMemo(() => {
-    try {
-      const workerUmd = new File(Paths.bundle, 'www.bundle', 'vendor', 'alphaTab.min.js').base64Sync()
-      const soundFont = new File(Paths.bundle, 'www.bundle', 'soundfont', 'sonivox.sf2').base64Sync()
-      return { workerUmd, soundFont }
-    } catch {
-      return null
-    }
-  }, [])
-
   const onScoreLoaded = async (summary: ScoreSummary) => {
     setTitle(summary.title || file || 'Untitled')
     setTracks(summary.tracks)
@@ -178,7 +231,7 @@ export default function Player() {
               <ActivityIndicator size="large" />
             </View>
           )}
-          {fileBase64 !== null && (
+          {fileBase64 !== null && domAssetsReady && (
             <TabView
               fileBase64={fileBase64}
               texBase64={null}
@@ -220,9 +273,21 @@ export default function Player() {
             setTracks((prev) => prev.map((t) => (t.index === i ? { ...t, isMute: v } : t)))
             send({ type: 'muteTrack', trackIndex: i, value: v })
           }}
+          onMuteAll={() => {
+            setTracks((prev) => prev.map((t) => ({ ...t, isMute: true })))
+            send({ type: 'muteAllTracks' })
+          }}
+          onUnmuteAll={() => {
+            setTracks((prev) => prev.map((t) => ({ ...t, isMute: false })))
+            send({ type: 'unmuteAllTracks' })
+          }}
           onSolo={(i, v) => {
             setTracks((prev) => prev.map((t) => (t.index === i ? { ...t, isSolo: v } : t)))
             send({ type: 'soloTrack', trackIndex: i, value: v })
+          }}
+          onClearSolo={() => {
+            setTracks((prev) => prev.map((t) => ({ ...t, isSolo: false })))
+            send({ type: 'clearSoloTracks' })
           }}
           onVolume={(i, v) => {
             setVolumes((prev) => ({ ...prev, [i]: v }))

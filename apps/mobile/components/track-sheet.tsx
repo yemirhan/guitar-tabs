@@ -14,7 +14,10 @@ interface Props {
   volumes: Record<number, number>
   onSelect: (trackIndex: number) => void
   onMute: (trackIndex: number, value: boolean) => void
+  onMuteAll: () => void
+  onUnmuteAll: () => void
   onSolo: (trackIndex: number, value: boolean) => void
+  onClearSolo: () => void
   onVolume: (trackIndex: number, value: number) => void
 }
 
@@ -26,7 +29,10 @@ export default function TrackSheet({
   volumes,
   onSelect,
   onMute,
+  onMuteAll,
+  onUnmuteAll,
   onSolo,
+  onClearSolo,
   onVolume
 }: Props) {
   return (
@@ -40,6 +46,13 @@ export default function TrackSheet({
             presentationBackgroundInteraction({ type: 'enabledUpThrough', detent: 'medium' })
           ]}>
           <List>
+            <Section title="Quick Actions">
+              <HStack spacing={8}>
+                <Button label="Mute all" systemImage="speaker.slash.fill" onPress={onMuteAll} />
+                <Button label="Unmute all" systemImage="speaker.wave.2.fill" onPress={onUnmuteAll} />
+              </HStack>
+              <Button label="Clear solo" systemImage="person.2.slash" onPress={onClearSolo} />
+            </Section>
             {tracks.map((track) => {
               const selected = track.index === selectedIndex
               return (

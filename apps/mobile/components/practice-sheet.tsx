@@ -1,5 +1,6 @@
 import { Host, BottomSheet, Group, List, Section, HStack, Toggle, Slider, Stepper, Button, Text, Spacer, Image } from '@expo/ui/swift-ui'
-import { buttonStyle, font } from '@expo/ui/swift-ui/modifiers'
+import { useColorScheme } from 'react-native'
+import { buttonStyle, font, frame } from '@expo/ui/swift-ui/modifiers'
 import {
   presentationDetents,
   presentationDragIndicator,
@@ -32,10 +33,52 @@ export default function PracticeSheet({
   onStart,
   onStop
 }: Props) {
+  const colorScheme = useColorScheme()
+  const theme = colorScheme === 'light' ? 'light' : 'dark'
   const set = (patch: Partial<PracticeConfig>) => onConfigChange({ ...config, ...patch })
+  const actionButtonModifiers = [
+    buttonStyle('borderedProminent'),
+    font({ weight: 'semibold' })
+  ]
+  const actionContentModifiers = [frame({ maxWidth: 1000, minHeight: 44 })]
+  const actionSection = (
+    <Section>
+      {isLooping ? (
+        <>
+          <HStack spacing={8}>
+            <Image systemName="repeat" size={16} color="#34c759" />
+            <Text>{`Loop ${loopCount} · ${Math.round(currentTempo * 100)}%`}</Text>
+            <Spacer />
+          </HStack>
+          <Button
+            role="destructive"
+            onPress={onStop}
+            modifiers={actionButtonModifiers}>
+            <HStack spacing={8} modifiers={actionContentModifiers}>
+              <Spacer />
+              <Image systemName="stop.fill" size={15} />
+              <Text>Stop Practice</Text>
+              <Spacer />
+            </HStack>
+          </Button>
+        </>
+      ) : (
+        <Button
+          onPress={onStart}
+          modifiers={actionButtonModifiers}>
+          <HStack spacing={8} modifiers={actionContentModifiers}>
+            <Spacer />
+            <Image systemName="play.fill" size={15} />
+            <Text>Start Practice Loop</Text>
+            <Spacer />
+          </HStack>
+        </Button>
+      )}
+    </Section>
+  )
 
   return (
-    <Host style={{ position: 'absolute', width: 1, height: 1 }}>
+    <Host colorScheme={theme} style={{ position: 'absolute', width: 1, height: 1 }}>
       <BottomSheet isPresented={isPresented} onIsPresentedChange={onIsPresentedChange}>
         <Group
           modifiers={[
@@ -45,6 +88,7 @@ export default function PracticeSheet({
             presentationBackgroundInteraction({ type: 'enabledUpThrough', detent: 'medium' })
           ]}>
           <List>
+            {actionSection}
             <Section title="Loop range">
               <Stepper
                 label={`Start bar: ${config.startBar}`}
@@ -104,30 +148,6 @@ export default function PracticeSheet({
                 isOn={config.countIn}
                 onIsOnChange={(v) => set({ countIn: v })}
               />
-            </Section>
-            <Section>
-              {isLooping ? (
-                <>
-                  <HStack spacing={8}>
-                    <Image systemName="repeat" size={16} color="#34c759" />
-                    <Text>{`Loop ${loopCount} · ${Math.round(currentTempo * 100)}%`}</Text>
-                    <Spacer />
-                  </HStack>
-                  <Button
-                    label="Stop Practice"
-                    systemImage="stop.fill"
-                    role="destructive"
-                    onPress={onStop}
-                  />
-                </>
-              ) : (
-                <Button
-                  label="Start Practice Loop"
-                  systemImage="play.fill"
-                  onPress={onStart}
-                  modifiers={[buttonStyle('borderedProminent'), font({ weight: 'semibold' })]}
-                />
-              )}
             </Section>
           </List>
         </Group>

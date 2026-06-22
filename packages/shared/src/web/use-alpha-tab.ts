@@ -53,6 +53,7 @@ export interface AlphaTabActions {
   muteAllTracks: () => void
   unmuteAllTracks: () => void
   soloTrack: (track: alphaTab.model.Track, solo: boolean) => void
+  clearSoloTracks: () => void
   loadTex: (tex: string) => void
   getScore: () => alphaTab.model.Score | null
   getApi: () => alphaTab.AlphaTabApi | null
@@ -255,6 +256,7 @@ export function useAlphaTab(
   const muteTrack = useCallback((track: alphaTab.model.Track, mute: boolean) => {
     const api = apiRef.current
     if (!api?.score) return
+    track.playbackInfo.isMute = mute
     api.changeTrackMute([track], mute)
     setTracks([...api.score.tracks])
   }, [])
@@ -262,6 +264,7 @@ export function useAlphaTab(
   const soloTrack = useCallback((track: alphaTab.model.Track, solo: boolean) => {
     const api = apiRef.current
     if (!api?.score) return
+    track.playbackInfo.isSolo = solo
     api.changeTrackSolo([track], solo)
     setTracks([...api.score.tracks])
   }, [])
@@ -269,6 +272,9 @@ export function useAlphaTab(
   const muteAllTracks = useCallback(() => {
     const api = apiRef.current
     if (!api?.score || api.score.tracks.length === 0) return
+    for (const track of api.score.tracks) {
+      track.playbackInfo.isMute = true
+    }
     api.changeTrackMute(api.score.tracks, true)
     setTracks([...api.score.tracks])
   }, [])
@@ -276,7 +282,19 @@ export function useAlphaTab(
   const unmuteAllTracks = useCallback(() => {
     const api = apiRef.current
     if (!api?.score || api.score.tracks.length === 0) return
+    for (const track of api.score.tracks) {
+      track.playbackInfo.isMute = false
+    }
     api.changeTrackMute(api.score.tracks, false)
+    setTracks([...api.score.tracks])
+  }, [])
+
+  const clearSoloTracks = useCallback(() => {
+    const api = apiRef.current
+    if (!api?.score || api.score.tracks.length === 0) return
+    for (const track of api.score.tracks) {
+      track.playbackInfo.isSolo = false
+    }
     api.changeTrackSolo(api.score.tracks, false)
     setTracks([...api.score.tracks])
   }, [])
@@ -427,6 +445,7 @@ export function useAlphaTab(
     muteAllTracks,
     unmuteAllTracks,
     soloTrack,
+    clearSoloTracks,
     loadTex,
     getScore,
     getApi,

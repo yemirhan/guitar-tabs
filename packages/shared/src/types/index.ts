@@ -56,7 +56,10 @@ export type TabCommand =
   | { type: 'setZoom'; value: number }
   | { type: 'selectTrack'; trackIndex: number }
   | { type: 'muteTrack'; trackIndex: number; value: boolean }
+  | { type: 'muteAllTracks' }
+  | { type: 'unmuteAllTracks' }
   | { type: 'soloTrack'; trackIndex: number; value: boolean }
+  | { type: 'clearSoloTracks' }
   | { type: 'setTrackVolume'; trackIndex: number; value: number }
   | { type: 'practiceStart'; config: PracticeConfig }
   | { type: 'practiceStop' }
