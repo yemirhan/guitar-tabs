@@ -1,0 +1,53 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Support — Guitar Tab Reader" description="Get help with the Guitar Tab Reader app.">
+  <Header />
+
+  <main class="mx-auto max-w-3xl px-6 py-16">
+    <h1 class="text-3xl font-bold tracking-tight">Support</h1>
+    <p class="mt-2 text-gray-600">Need help with Guitar Tab Reader? We're here for you.</p>
+
+    <div class="mt-10 space-y-8 text-gray-700 leading-relaxed">
+      <section>
+        <h2 class="text-lg font-semibold text-gray-900">Contact Us</h2>
+        <p class="mt-2">For any questions, issues, or feedback, reach out to us at:</p>
+        <p class="mt-2">
+          <a href="mailto:support@guitartabreader.app" class="text-blue-600 hover:underline">support@guitartabreader.app</a>
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-semibold text-gray-900">Common Questions</h2>
+        <div class="mt-4 space-y-6">
+          <div>
+            <h3 class="font-medium text-gray-900">Which file types are supported?</h3>
+            <p class="mt-1">Guitar Tab Reader opens Guitar Pro files including .gp, .gpx, .gp5, .gp4, and .gp3. Rendering and playback are powered by the alphaTab engine.</p>
+          </div>
+          <div>
+            <h3 class="font-medium text-gray-900">How do I open a file?</h3>
+            <p class="mt-1">Open a file from within the app, or drag and drop it onto the window on desktop. Your files stay on your device and are never uploaded.</p>
+          </div>
+          <div>
+            <h3 class="font-medium text-gray-900">Why is there no sound during playback?</h3>
+            <p class="mt-1">Make sure your device volume is up and the track you want to hear is not muted. Some scores have individual tracks muted by default — check the track controls and unmute the parts you want to play.</p>
+          </div>
+          <div>
+            <h3 class="font-medium text-gray-900">Is the app really free?</h3>
+            <p class="mt-1">Yes. Guitar Tab Reader is completely free, with no ads, no accounts, no subscriptions, and no tracking.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-semibold text-gray-900">Bug Reports &amp; Feature Requests</h2>
+        <p class="mt-2">Found a bug or have an idea? Email us with a description of the issue, the file that caused it (if applicable), your device or operating system, and the app version. Screenshots or screen recordings are very helpful.</p>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

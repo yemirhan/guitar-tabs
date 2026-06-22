@@ -1,0 +1,104 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Guitar Tab Reader — Read & Play Guitar Pro Tabs">
+  <Header />
+
+  <main>
+    <!-- Hero -->
+    <section class="mx-auto max-w-5xl px-6 py-24 text-center">
+      <img
+        src="/icon.png"
+        alt="Guitar Tab Reader app icon"
+        width="96"
+        height="96"
+        class="mx-auto mb-8 h-24 w-24 rounded-2xl shadow-sm"
+      />
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900">
+        Read and play Guitar Pro tabs anywhere
+      </h1>
+      <p class="mt-6 text-lg text-gray-600 max-w-2xl mx-auto">
+        Open your Guitar Pro files, see clean tablature and standard notation,
+        and play along with full multi-track audio — on desktop and mobile.
+        Completely free, with no ads and no tracking.
+      </p>
+      <div class="mt-10 flex justify-center gap-4">
+        <span
+          class="inline-flex items-center rounded-full bg-gray-900 px-6 py-3 text-sm font-medium text-white opacity-90"
+        >
+          Coming soon
+        </span>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="mx-auto max-w-5xl px-6 py-16">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="space-y-3">
+          <h3 class="font-semibold text-gray-900">Guitar Pro Support</h3>
+          <p class="text-sm text-gray-600">Open Guitar Pro files (.gp, .gpx, .gp5, .gp4, .gp3) and render them faithfully.</p>
+        </div>
+        <div class="space-y-3">
+          <h3 class="font-semibold text-gray-900">Tab &amp; Notation</h3>
+          <p class="text-sm text-gray-600">View tablature and standard notation side by side, powered by alphaTab.</p>
+        </div>
+        <div class="space-y-3">
+          <h3 class="font-semibold text-gray-900">Play Along</h3>
+          <p class="text-sm text-gray-600">Hear your tabs with built-in multi-track playback and a synced cursor.</p>
+        </div>
+        <div class="space-y-3">
+          <h3 class="font-semibold text-gray-900">Multi-Track Control</h3>
+          <p class="text-sm text-gray-600">Solo, mute, and switch between every track and instrument in the score.</p>
+        </div>
+        <div class="space-y-3">
+          <h3 class="font-semibold text-gray-900">Practice Tools</h3>
+          <p class="text-sm text-gray-600">Adjust tempo, loop sections, and gradually speed up to learn passages.</p>
+        </div>
+        <div class="space-y-3">
+          <h3 class="font-semibold text-gray-900">Fretboard &amp; Chords</h3>
+          <p class="text-sm text-gray-600">Follow notes on an interactive fretboard and read chord diagrams as you play.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screenshots -->
+    <section class="mx-auto max-w-5xl px-6 py-16">
+      <h2 class="text-2xl font-bold tracking-tight text-gray-900 text-center">A closer look</h2>
+      <div class="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <figure class="space-y-3">
+          <img src="/screenshots/library.png" alt="Library of imported Guitar Pro tabs" loading="lazy" class="w-full rounded-2xl border border-gray-100 shadow-sm" />
+          <figcaption class="text-center text-sm text-gray-600">Your tab library</figcaption>
+        </figure>
+        <figure class="space-y-3">
+          <img src="/screenshots/score.png" alt="Tablature and standard notation view" loading="lazy" class="w-full rounded-2xl border border-gray-100 shadow-sm" />
+          <figcaption class="text-center text-sm text-gray-600">Tab &amp; notation</figcaption>
+        </figure>
+        <figure class="space-y-3">
+          <img src="/screenshots/tracks.png" alt="Per-track mute and solo controls" loading="lazy" class="w-full rounded-2xl border border-gray-100 shadow-sm" />
+          <figcaption class="text-center text-sm text-gray-600">Mix the tracks</figcaption>
+        </figure>
+        <figure class="space-y-3">
+          <img src="/screenshots/practice.png" alt="Practice loop with tempo control" loading="lazy" class="w-full rounded-2xl border border-gray-100 shadow-sm" />
+          <figcaption class="text-center text-sm text-gray-600">Practice with loops</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Privacy callout -->
+    <section class="mx-auto max-w-5xl px-6 py-16">
+      <div class="rounded-2xl bg-gray-50 px-8 py-12 text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-gray-900">Free, private, and yours</h2>
+        <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+          Guitar Tab Reader has no accounts, no subscriptions, and no analytics.
+          Your tab files stay on your device — we never see them and we never
+          track how you use the app.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
